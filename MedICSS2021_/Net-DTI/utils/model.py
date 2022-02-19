@@ -29,7 +29,7 @@ class MRIModel(object):
     _kernel2 = 150
     _kernel3 = 150
 
-    def __init__(self, ndwi=96, model='fc1d', layer=3, train=True, kernels=None, test_shape=[90, 90, 90]):
+    def __init__(self, ndwi=96, model='fc1d', layer=3, train=True, kernels=None, test_shape=None):
         self._ndwi = ndwi
         self._type = model
         self._hist = None
@@ -51,8 +51,10 @@ class MRIModel(object):
 
         hidden = Dropout(0.1)(hidden)
 
-        # Define output layer
-        outputs = Dense(2, name='output', activation='relu')(hidden)
+        # Define output layer, because NODDI has 3 output parametrs
+        # outputs = Dense(3, name='output', activation='relu')(hidden)
+        # Define output layer for Experiment 1
+        outputs = Dense(1, name='output', activation='relu')(hidden)
 
         self._model = Model(inputs=inputs, outputs=outputs)
 
@@ -128,7 +130,7 @@ class MRIModel(object):
         """
         Training on training datasets.
         """
-        #print "Training start ..."
+        print("Training start ...")
         self.__train[self._type](self, data, label, nbatch, epochs,
                                  callbacks, shuffle, validation_data)
 
@@ -152,6 +154,7 @@ class MRIModel(object):
         """
         pred = self._model.predict(data)
         if self._type[-6:] == 'staged':
+            print('staged')
             pred = np.concatenate((pred[0], pred[1]), axis=-1)
 
         return pred
@@ -164,9 +167,9 @@ def parser():
     
     # Specify train & test sets
     parser.add_argument("--train_subjects", help="Training subjects IDs", nargs='*')
-    parser.add_argument("--test_subject", help="Testing subject ID", nargs='*')
+    parser.add_argument("--test_subjects", help="Testing subject ID", nargs='*')
     parser.add_argument("--scheme", metavar='name', help="The scheme for sampling", default='first')
-    parser.add_argument("--DWI", metavar='N', help="Number of input DWI volumes", type=int, default=60)
+    parser.add_argument("--DWI", metavar='N', help="Number of input DWI volumes", type=int, default=10)
   
    # Training parameters
     parser.add_argument("--train", help="Train the network", action="store_true")
@@ -179,10 +182,10 @@ def parser():
                         type=int, default=None)
         
     # Just For test; not use anymore
-    parser.add_argument("--loss", help="Set different loss functions", action="store_true")
+    parser.add_argument("--loss", help="Set different loss functions", type=int, default=0)
     parser.add_argument("--test_shape", nargs='*', type=int, default=None)
     parser.add_argument("--batch", metavar='bn', help="Batch size", type=int, default=256)
-    parser.add_argument("--patch_size", metavar='ksize', help="Size of the kernels", type=int, default=3)
+    parser.add_argument("--patch_size", metavar='ksize', help="Size of the kernels", type=int, default=3) #default patch_size is already 3
     parser.add_argument("--base", metavar='base', help="choice of training data", type=int, default=1)    
 
     return parser

@@ -41,10 +41,10 @@ label_size = patch_size - 2
 base = args.base
 
 # Parameter name definition
-savename = str(nDWI)+ '-'  + scheme + '-' + args.model
+savename = str(nDWI)+ '-'  + scheme + '-' + args.model + '-' + str(layer) + 'layer'
 
 # Constants
-types = ['FA' , 'MD']
+types = ['NDI' , 'ODI', 'FWF']
 ntypes = len(types)
 decay = 0.1
 

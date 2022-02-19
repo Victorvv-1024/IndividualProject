@@ -5,15 +5,25 @@ Functions for Generating or save dataset.
 import os
 import numpy as np
 from scipy.io import loadmat, savemat
-from utils.nii_utils import load_nii_image, save_nii_image, mask_nii_data
+from utils.nii_utils import load_nii_image, save_nii_image, mask_nii_data, unmask_nii_data
 
 def gen_dMRI_fc1d_train_datasets(path, subject, ndwi, scheme, combine=None, whiten=True):
     """
     Generate fc1d training Datasets.
+    path: the directory of the dataset folder (i.e the absolute path of Data-NODDI)
+    subject: the subfolder name under Data-NODDI. (e.g. s01_still)
+    ndwi: the first number of dwis to be read
+    scheme: the rejection scheme to be used
+    combine: if rejection shceme is presented, then True
     """
-    ltype = ['FA' , 'MD']
+    # ltype are a list of label types
+    ltype = ['NDI' , 'ODI', 'FWF']
+    # ltype for Experiment1
+    ltype_NDI = ['NDI']
+    ltype_ODI = ['ODI']
+    ltype_FWF = ['FWF'] 
     os.system("mkdir -p datasets/data datasets/label datasets/mask")
-    os.system('cp ' +  path + '/' + subject + '/nodif_brain_mask.nii datasets/mask/mask_' + subject + '.nii')      
+    os.system('cp ' +  path + '/' + subject + '/mask-e.nii datasets/mask/mask_' + subject + '.nii')      
     mask = load_nii_image('datasets/mask/mask_' + subject + '.nii')
         
     # load diffusion data
@@ -30,19 +40,21 @@ def gen_dMRI_fc1d_train_datasets(path, subject, ndwi, scheme, combine=None, whit
         data = data / data.mean() - 1.0
     print(data.shape)
 
-    # load labels
-    label = np.zeros((data.shape[0] , len(ltype)))
-    #for i in range(len(ltype)):
-    #    filename = path + '/' + subject + '/' + subject + '_' + ltype[i] + '.nii'
-    #    temp = load_nii_image(filename,mask) 
-    #    label[:, i] = temp.reshape(temp.shape[0])  
-    filename = path + '/' + subject + '/' + subject + '_' + ltype[0] + '.nii'
-    temp = load_nii_image(filename,mask)
-    label[:, 0] = temp.reshape(temp.shape[0]) 
+    # load labels, without scaling
+    label = np.zeros((data.shape[0] , len(ltype_FWF)))
+    for i in range(len(ltype_FWF)):
+       filename = path + '/' + subject + '/' + subject + '_' + ltype_FWF[i] + '.nii'
+       temp = load_nii_image(filename,mask) 
+       label[:, i] = temp.reshape(temp.shape[0]) 
 
-    filename = path + '/' + subject + '/' + subject + '_' + ltype[1] + '.nii'
-    temp = load_nii_image(filename,mask) * 1000   # scale MD to the value around 1
-    label[:, 1] = temp.reshape(temp.shape[0]) 
+    # load labels, if scaling is necessary 
+    # filename = path + '/' + subject + '/' + subject + '_' + ltype[0] + '.nii'
+    # temp = load_nii_image(filename,mask)
+    # label[:, 0] = temp.reshape(temp.shape[0]) 
+
+    # filename = path + '/' + subject + '/' + subject + '_' + ltype[1] + '.nii'
+    # temp = load_nii_image(filename,mask) * 1000   # scale MD to the value around 1
+    # label[:, 1] = temp.reshape(temp.shape[0]) 
      
     print(label.shape)
 
@@ -54,19 +66,25 @@ def gen_dMRI_fc1d_train_datasets(path, subject, ndwi, scheme, combine=None, whit
 
     # save datasets
     savemat('datasets/data/' + subject + '-' + str(ndwi) + '-' + scheme + '-' + '1d.mat', {'data':data})
-    savemat('datasets/label/' + subject + '-' + str(ndwi) + '-' + scheme + '-' + '1d.mat', {'label':label})
+    savemat('datasets/label/' + subject + 'FWF' +'-' + str(ndwi) + '-' + scheme + '-' + '1d.mat', {'label':label})
 
 def gen_dMRI_test_datasets(path, subject, ndwi, scheme, combine=None,  fdata=True, flabel=True, whiten=True):
     """
     Generate testing Datasets.
     """
-    ltype = ['FA' , 'MD']
+    # ltype are a list of label types
+    ltype = ['NDI' , 'ODI', 'FWF']
+    # ltype for Experiment1
+    ltype_NDI = ['NDI']
+    ltype_ODI = ['ODI']
+    ltype_FWF = ['FWF']
     os.system("mkdir -p datasets/data datasets/label datasets/mask")
-    os.system('cp ' +  path + '/' + subject + '/nodif_brain_mask.nii datasets/mask/mask_' + subject + '.nii')   
+    os.system('cp ' +  path + '/' + subject + '/mask-e.nii datasets/mask/mask_' + subject + '.nii')   
     mask = load_nii_image('datasets/mask/mask_' + subject + '.nii')
             
     if fdata:
-        data = load_nii_image(path + '/' + subject + '/diffusion.nii')
+        # data = load_nii_image(path + '/' + subject + '/diffusion.nii')
+        data = load_nii_image(path + '/' + subject + '/diffusion.nii', mask)
         
         # Select the inputs.
         if combine is not None:
@@ -76,18 +94,24 @@ def gen_dMRI_test_datasets(path, subject, ndwi, scheme, combine=None,  fdata=Tru
 
         # Whiten the data.
         if whiten:
-            data = data / data[mask > 0].mean() - 1.0
+            # data = data / data[mask > 0].mean() - 1.0
+            data = data / data.mean() - 1.0
         
         print(data.shape)
         savemat('datasets/data/' + subject + '-' + str(ndwi) + '-' + scheme + '.mat', {'data':data})
 
     if flabel:
-        label = np.zeros(mask.shape + (len(ltype),))
-        for i in range(len(ltype)):
-            filename = path + '/' + subject + '/' + subject + '_' + ltype[i] + '.nii'
-            label[:, :, :, i] = load_nii_image(filename)
+        # label = np.zeros(mask.shape + (len(ltype_NDI),))
+        label = np.zeros((data.shape[0] , len(ltype_FWF)))
+        for i in range(len(ltype_FWF)):
+            # filename = path + '/' + subject + '/' + subject + '_' + ltype_NDI[i] + '.nii'
+            # label[:, :, :, i] = load_nii_image(filename)
+            filename = path + '/' + subject + '/' + subject + '_' + ltype_FWF[i] + '.nii'
+            print(filename)
+            temp = load_nii_image(filename,mask) 
+            label[:, i] = temp.reshape(temp.shape[0])
         print(label.shape)
-        savemat('datasets/label/' + subject+ '-' + str(ndwi) + '-' + scheme + '.mat', {'label':label})
+        savemat('datasets/label/' + subject + 'FWF' + '-' + str(ndwi) + '-' + scheme + '.mat', {'label':label})
 
 def fetch_train_data_MultiSubject(subjects, ndwi, scheme):
     """
@@ -97,7 +121,7 @@ def fetch_train_data_MultiSubject(subjects, ndwi, scheme):
     labels = None
 
     for subject in subjects:
-        label = loadmat('datasets/label/' + subject + '-' + str(ndwi) + '-' + scheme + '-' + '1d.mat')['label']
+        label = loadmat('datasets/label/' + subject + 'FWF' +'-' + str(ndwi) + '-' + scheme + '-' + '1d.mat')['label']
         data = loadmat('datasets/data/' + subject + '-' + str(ndwi) + '-' + scheme + '-' + '1d.mat')['data']
 
         if data_s is None:
@@ -137,5 +161,5 @@ def repack_pred_label(pred, mask, model, ntype):
     else:
         label = pred.reshape(label.shape)
     
-    label[:,:,:,1]=label[:,:,:,1]/1000 # scale MD back while saving nii
+    # label[:,:,:,1]=label[:,:,:,1]/1000 # scale MD back while saving nii
     return label

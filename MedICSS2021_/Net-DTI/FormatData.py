@@ -22,11 +22,11 @@ import numpy as np
 
 from utils import gen_dMRI_test_datasets, gen_dMRI_fc1d_train_datasets
 
-
+# parser for genegrate the dataset 
 parser = argparse.ArgumentParser()
-parser.add_argument("--path", help="The path of data folder")
+parser.add_argument("--path", help="The path of data folder", default='/home/victor/Desktop/IndividualProject/MedICSS2021_/Data-NODDI')
 parser.add_argument("--subjects", help="subjects ID", nargs='*')
-parser.add_argument("--nDWI", help="The number of volumes", type=int)
+parser.add_argument("--nDWI", help="The number of volumes", type=int, default=10)
 parser.add_argument("--scheme", help="The sampling scheme used")
 parser.add_argument("--fc1d_train", help="generate fc1d data for training", action="store_true")
 parser.add_argument("--test", help="generate base data for testing", action="store_true")
