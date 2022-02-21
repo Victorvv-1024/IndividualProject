@@ -53,24 +53,33 @@ class MRIModel(object):
 
         # Define output layer, because NODDI has 3 output parametrs
         # outputs = Dense(3, name='output', activation='relu')(hidden)
+        
         # Define output layer for Experiment 1
         outputs = Dense(1, name='output', activation='relu')(hidden)
 
         self._model = Model(inputs=inputs, outputs=outputs)
 
 
+    def _conv2d_model(self, patch_size):
+        """
+        Conv2D model.
+        """
+        if self._train:
+            inputs = Input(shape=(patch_size, patch_size, self._ndwi))
+        else:
+            (dim0, dim1) = (self._test_shape[0], self._test_shape[1])
+            inputs = Input(shape=(dim0, dim1, self._ndwi))
+        hidden = Conv2D(self._kernel1, 3, activation='relu', padding='valid')(inputs)
+        for i in np.arange(self._layer - 1):
+            hidden = Conv2D(self._kernel1, 1, activation='relu', padding='valid')(hidden)
+        hidden = Dropout(0.1)(hidden)
+        # For experiment 1, the output is 1
+        outputs = Conv2D(1, 1, activation='relu', padding='valid')(hidden)
+
+        self._model = Model(inputs=inputs, outputs=outputs)
 
 
-    """
-    Define your new model here.
 
-    """
-
-
-
-
-
-    
     def _conv3d_model(self, patch_size):
         """
         Conv3D model.
@@ -90,6 +99,7 @@ class MRIModel(object):
 
     __model = {
         'fc1d' : _fc1d_model,
+        'conv2d': _conv2d_model,
         'conv3d' : _conv3d_model,
     }
 
@@ -122,6 +132,7 @@ class MRIModel(object):
 
     __train = {
         'fc1d' : _sequence_train,
+        'conv2d': _sequence_train,
         'conv3d' : _sequence_train,
     }
 

@@ -70,7 +70,7 @@ weights = model._model.layers[1].get_weights()
 # Predict on the test data.
 pred = model.predict(tdata)
 # Evluate on the test data
-tlabel = loadmat('datasets/label/' + test_subjects + 'FWF' + '-' + str(nDWI) + '-' + scheme + '.mat')['label']
+tlabel = loadmat('datasets/label/' + test_subjects + 'NDI' + '-' + str(nDWI) + '-' + scheme + '.mat')['label']
 rmse = np.sqrt(np.mean((pred-tlabel)**2))
 print(np.around(rmse,decimals=5))
 

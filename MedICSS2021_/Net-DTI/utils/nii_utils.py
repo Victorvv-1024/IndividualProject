@@ -7,6 +7,7 @@ import numpy as np
 from scipy.io import loadmat, savemat
 from nipy import load_image, save_image
 from nipy.core.api import Image
+import tensorflow as tf
 import nibabel
 
 def mask_nii_data(data, mask):
@@ -31,13 +32,13 @@ def unmask_nii_data(data, mask):
 
     return value.reshape(shape)
 
-def load_nii_image(filename, mask=None):
+def load_nii_image(filename, mask=None, patch=None):
     """
     Get data from nii image.
     """
     nii = load_image(filename)
     data = nii.get_data()
-
+    
     if mask is not None:
         data = mask_nii_data(data, mask)
 
