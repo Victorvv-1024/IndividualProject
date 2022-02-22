@@ -64,6 +64,7 @@ class MRIModel(object):
         """
         Conv2D model.
         """
+        
         if self._train:
             inputs = Input(shape=(patch_size, patch_size, self._ndwi))
         else:

@@ -10,6 +10,7 @@ import os
 import time
 
 from scipy.io import savemat, loadmat
+from sympy import arg
 
 from tensorflow.keras.optimizers import SGD, Adam
 from tensorflow.keras.models import save_model, load_model
@@ -27,6 +28,7 @@ train_subjects = args.train_subjects
 test_subjects = args.test_subjects[0]
 nDWI = args.DWI
 scheme = args.scheme
+train = args.train
 mtype = args.model
 
 lr = args.lr
@@ -59,6 +61,7 @@ tdata = loadmat('datasets/data/' + test_subjects + '-' + str(nDWI) + '-' + schem
 test_shape = args.test_shape
 if test_shape is None:
   test_shape = tdata.shape[1:4]
+print(test_shape)
 
 # Define the model
 model = MRIModel(nDWI, model=mtype, layer=layer, train=False, kernels=kernels, test_shape=test_shape)
@@ -69,20 +72,22 @@ weights = model._model.layers[1].get_weights()
 
 # Predict on the test data.
 pred = model.predict(tdata)
+print(pred.shape)
 # Evluate on the test data
 tlabel = loadmat('datasets/label/' + test_subjects + 'NDI' + '-' + str(nDWI) + '-' + scheme + '.mat')['label']
-rmse = np.sqrt(np.mean((pred-tlabel)**2))
-print(np.around(rmse,decimals=5))
+# print(tlabel.shape)
+# rmse = np.sqrt(np.mean((pred-tlabel)**2))
+# print(np.around(rmse,decimals=5))
 
-# pred = repack_pred_label(pred, mask, mtype, ntypes_0)
+# pred = repack_pred_label(pred, mask, mtype, ntypes)
+pred = repack_pred_label(pred, mask, mtype, 1)
 
-# For experiment 2
 # Save estimated measures to /nii folder as nii image
-# os.system("mkdir -p nii")
+os.system("mkdir -p nii")
 
-# for i in range(ntypes_0):
-#     data = pred[..., i]
-#     filename = 'nii/' + test_subjects + '-' + type_0[i] + '-' + savename + '.nii'
+for i in range(1):
+    data = pred[..., i]
+    filename = 'nii/' + test_subjects + '-' + 'NDI' + '-' + savename + '.nii'
 
-#     data[mask == 0] = 0
-#     save_nii_image(filename, data, 'datasets/mask/mask_' + test_subjects + '.nii', None)
+    data[mask == 0] = 0
+    save_nii_image(filename, data, 'datasets/mask/mask_' + test_subjects + '.nii', None)
