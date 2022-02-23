@@ -91,11 +91,13 @@ def gen_3d_patches(data, mask, size, stride):
                 lxend, lyend, llayerend = np.array([x, y, layer]) + stride
                 if mask[x:lxend, y:lyend, layer:llayerend].sum() > 0:
                     if (layerend > mask.shape[2]):
-                        return np.array(patches)
+                        continue
                     patch = data[x:xend, y:yend, layer: layerend, :]
+                    print(layer)
+                    print(layerend)
                     patches.append(patch)
 
-    # return np.array(patches)
+    return np.array(patches)
 
 def gen_dMRI_conv2d_train_datasets(path, subject, ndwi, scheme, patch_size, label_size, base=1, test=False, combine=None, whiten=True):
     """
@@ -200,9 +202,9 @@ def gen_dMRI_conv3d_train_datasets(path, subject, ndwi, scheme, patch_size, labe
 
     patches = gen_3d_patches(data, mask, patch_size, label_size)
     patches = patches.reshape(patches.shape[0], -1)
+    print(patches.shape)
 
     label = gen_3d_patches(label, mask, label_size, label_size)
-    print(patches.shape)
     print(label.shape)
 
     savemat('datasets/data/' + subject + '-' + str(ndwi) + '-' + scheme + '-' + '3d.mat', {'data':patches})

@@ -48,12 +48,7 @@ class MRIModel(object):
         hidden = Dense(self._kernel1, activation='relu')(inputs)
         for i in np.arange(self._layer  - 1):
             hidden = Dense(self._kernel1, activation='relu')(hidden)
-
         hidden = Dropout(0.1)(hidden)
-
-        # Define output layer, because NODDI has 3 output parametrs
-        # outputs = Dense(3, name='output', activation='relu')(hidden)
-        
         # Define output layer for Experiment 1
         outputs = Dense(1, name='output', activation='relu')(hidden)
 
@@ -94,7 +89,8 @@ class MRIModel(object):
         for i in np.arange(self._layer - 1):
             hidden = Conv3D(self._kernel1, 1, activation='relu', padding='valid')(hidden)
         hidden = Dropout(0.1)(hidden)
-        outputs = Conv3D(2, 1, activation='relu', padding='valid')(hidden)
+        # For experiment 1, the output is 1
+        outputs = Conv3D(1, 1, activation='relu', padding='valid')(hidden)
 
         self._model = Model(inputs=inputs, outputs=outputs)
 
