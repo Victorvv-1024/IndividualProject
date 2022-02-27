@@ -18,76 +18,78 @@ from tensorflow.keras.callbacks import ReduceLROnPlateau, TensorBoard, \
                                                             EarlyStopping
 
 from utils import save_nii_image, calc_RMSE, loss_func, repack_pred_label, \
-                  MRIModel, parser, load_nii_image, unmask_nii_data, loss_funcs, fetch_train_data_MultiSubject
+                  MRIModel, load_nii_image, unmask_nii_data, loss_funcs, fetch_train_data_MultiSubject
+from utils.model import parser
 
 
 # Get parameter from command-line input
-args = parser().parse_args()
+def test_model(args):
+  test_subjects = args.test_subjects[0]
+  nDWI = args.DWI
+  scheme = args.scheme
+  mtype = args.model
+  lr = args.lr
+  kernels = args.kernels
+  layer = args.layer
+  label_type = args.label_type
+  patch_size = args.patch_size
 
-train_subjects = args.train_subjects
-test_subjects = args.test_subjects[0]
-nDWI = args.DWI
-scheme = args.scheme
-train = args.train
-mtype = args.model
+  # Constants
+  if label_type == ['N']:
+      ltype = ['NDI']
+  elif label_type == ['O']:
+      ltype = ['ODI']
+  elif label_type == ['F']:
+      ltype = ['FWF']
+  elif label_type == ['A']:
+      ltype = ['NDI' , 'ODI', 'FWF']
+  decay = 0.1
 
-lr = args.lr
-epochs = args.epoch
-kernels = args.kernels
-layer = args.layer
+  # Parameter name definition
+  savename = str(nDWI)+ '-'  + scheme + '-' + args.model + '-' + str(layer) + 'layer'
 
-loss = args.loss
-batch_size = args.batch
-patch_size = args.patch_size
-label_size = patch_size - 2
-base = args.base
+  # Define the adam optimizer
+  adam = Adam(lr=lr, beta_1=0.9, beta_2=0.999, epsilon=1e-8)
 
-# Constants
-types = ['NDI' , 'ODI', 'FWF']
-ntypes = len(types)
-decay = 0.1
+  # Load testing data
+  mask = load_nii_image('datasets/mask/mask_' + test_subjects + '.nii')
+  tdata = loadmat('datasets/data/' + test_subjects + '-' + str(nDWI) + '-' + scheme + '.mat')['data']
 
-# Parameter name definition
-savename = str(nDWI)+ '-'  + scheme + '-' + args.model + '-' + str(layer) + 'layer'
+  test_shape = args.test_shape
+  if test_shape is None:
+    test_shape = tdata.shape[1:4]
 
-# Define the adam optimizer
-adam = Adam(lr=lr, beta_1=0.9, beta_2=0.999, epsilon=1e-8)
+  # Define the model
+  model = MRIModel(nDWI, model=mtype, layer=layer, train=False, kernels=kernels, test_shape=test_shape)
+  model.model(adam, loss_func, patch_size)
+  model.load_weight(savename)
 
-# Load testing data
-mask = load_nii_image('datasets/mask/mask_' + test_subjects + '.nii')
-tdata = loadmat('datasets/data/' + test_subjects + '-' + str(nDWI) + '-' + scheme + '.mat')['data']
-# print(tdata)
+  # Get the weights
+  weights = model._model.layers[1].get_weights()
 
-test_shape = args.test_shape
-if test_shape is None:
-  test_shape = tdata.shape[1:4]
-print(test_shape)
+  # Predict on the test data.
+  print(tdata.shape)
+  pred = model.predict(tdata)
+  print(pred.shape)
+  # Evluate on the test data
+  # tlabel = loadmat('datasets/label/' + test_subjects + '-' + ''.join(ltype) +'-' + str(nDWI) + '-' + scheme + '.mat')['label']
+  # print(tlabel.shape)
+  # rmse = np.sqrt(np.mean((pred-tlabel)**2))
+  # print(np.around(rmse,decimals=5))
+  # print(calc_RMSE(pred, tlabel, mask, percentage=False, model=mtype))
 
-# Define the model
-model = MRIModel(nDWI, model=mtype, layer=layer, train=False, kernels=kernels, test_shape=test_shape)
-model.model(adam, loss_func, patch_size)
-model.load_weight(savename)
+  pred = repack_pred_label(pred, mask, mtype, len(ltype))
 
-weights = model._model.layers[1].get_weights()
+  # Save estimated measures to /nii folder as nii image
+  os.system("mkdir -p nii")
 
-# Predict on the test data.
-pred = model.predict(tdata)
-print(pred.shape)
-# Evluate on the test data
-tlabel = loadmat('datasets/label/' + test_subjects + 'NDI' + '-' + str(nDWI) + '-' + scheme + '.mat')['label']
-# print(tlabel.shape)
-# rmse = np.sqrt(np.mean((pred-tlabel)**2))
-# print(np.around(rmse,decimals=5))
+  for i in range(len(ltype)):
+      data = pred[..., i]
+      filename = 'nii/' + test_subjects + '-' + ltype[i] + '-' + savename + '.nii'
 
-# pred = repack_pred_label(pred, mask, mtype, ntypes)
-pred = repack_pred_label(pred, mask, mtype, 1)
+      data[mask == 0] = 0
+      save_nii_image(filename, data, 'datasets/mask/mask_' + test_subjects + '.nii', None)
 
-# Save estimated measures to /nii folder as nii image
-os.system("mkdir -p nii")
-
-for i in range(1):
-    data = pred[..., i]
-    filename = 'nii/' + test_subjects + '-' + 'NDI' + '-' + savename + '.nii'
-
-    data[mask == 0] = 0
-    save_nii_image(filename, data, 'datasets/mask/mask_' + test_subjects + '.nii', None)
+if __name__ == '__main__':
+  args = parser().parse_args()
+  test_model(args)

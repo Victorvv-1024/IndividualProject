@@ -43,7 +43,13 @@ class MRIModel(object):
         """
         Fully-connected 1d ANN model.
         """
-        inputs = Input(shape=(self._ndwi,))
+        if self._train:
+            inputs = Input(shape=(self._ndwi,))
+        else:
+            print("train is false")
+            (dim0, dim1) = (self._test_shape[0], self._test_shape[1])
+            inputs = Input(shape=(dim0, dim1, self._ndwi))
+        # inputs = Input(shape=(self._ndwi,))
         # Define hidden layer
         hidden = Dense(self._kernel1, activation='relu')(inputs)
         for i in np.arange(self._layer  - 1):
@@ -183,6 +189,8 @@ def parser():
     parser.add_argument("--train", help="Train the network", action="store_true")
     parser.add_argument("--model", help="Train model",
                         choices=['fc1d', 'conv2d', 'conv3d'], default='fc1d')
+    parser.add_argument("--label_type", help="select which label to train. N for NDI, O for ODI and F for FWF; A for all.", 
+                        choices=['N', 'O', 'F', 'A'], nargs=1)
     parser.add_argument("--layer", metavar='l', help="Number of layers", type=int, default=3)
     parser.add_argument("--lr", metavar='lr', help="Learning rates", type=float, default=0.001)
     parser.add_argument("--epoch", metavar='ep', help="Number of epoches", type=int, default=100)

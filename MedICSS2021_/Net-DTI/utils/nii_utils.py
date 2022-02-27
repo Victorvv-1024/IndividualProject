@@ -15,8 +15,14 @@ def mask_nii_data(data, mask):
     mask nii data from 3-D into 1-D
     """
     mask = mask.flatten()
+    print('mask has shape: ' +str(mask.shape))
     data = data.reshape(mask.shape[0], -1)
+    print('data befor masking')
+    print(data.shape)
     data = data[mask > 0]
+    print('data after masking')
+    print(data.shape)
+    print('the ratio of used voxels is: ' + str(data.shape[0]/mask.shape[0]))
     return data
 
 def unmask_nii_data(data, mask):
