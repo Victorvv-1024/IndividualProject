@@ -11,7 +11,7 @@ import numpy as np
 
 from tensorflow.keras.models import Model, Sequential
 from tensorflow.keras import regularizers
-from tensorflow.keras.layers import Dense, Dropout, Input, Conv2D, Conv3D, Flatten, Reshape, Conv2DTranspose, UpSampling2D, Concatenate
+from tensorflow.keras.layers import Dense, Dropout, Input, Conv2D, Conv3D, Flatten, Reshape, Conv2DTranspose, UpSampling2D, Concatenate, BatchNormalization
 
 
 class MRIModel(object):
@@ -26,7 +26,7 @@ class MRIModel(object):
     _loss = []
     _label = ''
     _kernel1 = 150
-    _kernel2 = 150
+    _kernel2 = 250
     _kernel3 = 150
 
     def __init__(self, ndwi=96, model='fc1d', layer=3, train=True, kernels=None, test_shape=None):
@@ -73,7 +73,9 @@ class MRIModel(object):
             inputs = Input(shape=(dim0, dim1, self._ndwi))
         hidden = Conv2D(self._kernel1, 3, activation='relu', padding='valid')(inputs)
         for i in np.arange(self._layer - 1):
+            # hidden = BatchNormalization()(hidden)
             hidden = Conv2D(self._kernel1, 1, activation='relu', padding='valid')(hidden)
+            # hidden = Dense(self._kernel1, activation='relu')(hidden)
         hidden = Dropout(0.1)(hidden)
         # For experiment 1, the output is 1
         outputs = Conv2D(1, 1, activation='relu', padding='valid')(hidden)
@@ -192,7 +194,7 @@ def parser():
     parser.add_argument("--label_type", help="select which label to train. N for NDI, O for ODI and F for FWF; A for all.", 
                         choices=['N', 'O', 'F', 'A'], nargs=1)
     parser.add_argument("--layer", metavar='l', help="Number of layers", type=int, default=3)
-    parser.add_argument("--lr", metavar='lr', help="Learning rates", type=float, default=0.001)
+    parser.add_argument("--lr", metavar='lr', help="Learning rates", type=float, default=0.0001)
     parser.add_argument("--epoch", metavar='ep', help="Number of epoches", type=int, default=100)
     parser.add_argument("--kernels", help="The number of kernels for each layer", nargs='*',
                         type=int, default=None)

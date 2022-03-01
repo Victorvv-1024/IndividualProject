@@ -32,7 +32,7 @@ def parser():
     # parser for genegrate the dataset 
     parser = argparse.ArgumentParser()
 
-    parser.add_argument("--path", help="The path of data folder", default='/home/victor/Desktop/IndividualProject/MedICSS2021_/Data-NODDI')
+    parser.add_argument("--path", help="The path of data folder", default='/home/vw/Desktop/IndividualProject/MedICSS2021_/Data-NODDI')
     parser.add_argument("--subjects", help="subjects ID", nargs='*')
     parser.add_argument("--nDWI", help="The number of volumes", type=int, default=10)
     parser.add_argument("--scheme", help="The sampling scheme used")

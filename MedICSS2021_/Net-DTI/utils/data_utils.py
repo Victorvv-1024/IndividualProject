@@ -332,7 +332,9 @@ def repack_pred_label(pred, mask, model, ntype):
         label = np.zeros(mask.shape + (ntype,))
     
     if model[:6] == 'conv2d':
-        label[1:-1, 1:-1, :, :] = pred.transpose(1, 2, 0, 3)
+        # add zero paddinsg to the reproduced 2d label
+        # label[:, 1:-1, 1:-1, :] = pred.transpose(1, 0, 2, 3)
+        label[:, 1:-1, 1:-1, :] = pred
 
         # label[1:-1, 1:-1, :, :] = pred
     elif model[:6] == 'conv3d':
