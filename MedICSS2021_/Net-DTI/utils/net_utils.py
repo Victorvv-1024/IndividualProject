@@ -103,7 +103,7 @@ def calc_RMSE(pred, gt, mask, percentage=False, model='', index=None):
     """
     Calculate RMSE of a & b
     """
-    if model[:6] == 'conv3d':
+    if model[:6] == 'conv3d' or 'conv2d':
         #true_mask[:, :, 1:-1] = mask[:, :, 1:-1]
         mask[:, :, 0] = 0
         mask[:, :, -1] = 0

@@ -85,7 +85,7 @@ def gen_2d_patches(data, mask, size, stride):
                     patches.append(data[x:xend, y:yend, layer, :])
 
     return np.array(patches)
-
+    
 def gen_3d_patches(data, mask, size, stride):
     """
     generate 3d patches
@@ -97,13 +97,14 @@ def gen_3d_patches(data, mask, size, stride):
                 xend, yend, layerend = np.array([x, y, layer]) + size
                 lxend, lyend, llayerend = np.array([x, y, layer]) + stride
                 if mask[x:lxend, y:lyend, layer:llayerend].sum() > 0:
-                    if (layerend > mask.shape[2]):
-                        continue
                     patch = data[x:xend, y:yend, layer: layerend, :]
-                    print(layer)
-                    print(layerend)
+                    shape = np.shape(patch)
+                    if shape[2] != size:
+                        padded_patch = np.zeros((size,size,size,shape[3]))
+                        padded_patch[:,:,:shape[2],] = patch
+                        patches.append(padded_patch)
+                        continue
                     patches.append(patch)
-
     return np.array(patches)
 
 def gen_dMRI_conv2d_train_datasets(path, subject, ndwi, scheme, patch_size, label_size, label_type, base=1, test=False, combine=None, whiten=True):
@@ -214,10 +215,12 @@ def gen_dMRI_conv3d_train_datasets(path, subject, ndwi, scheme, patch_size, labe
     if offset:
         data = data[offset:-offset, offset:-offset, :, :12]
 
+    print('generating data patches')
     patches = gen_3d_patches(data, mask, patch_size, label_size)
-    patches = patches.reshape(patches.shape[0], -1)
+    # patches = patches.reshape(patches.shape[0], -1)
     print('training dataset has shape:' + str(patches.shape))
 
+    print('generating label patches')
     label = gen_3d_patches(label, mask, label_size, label_size)
     print('training label has shape:' + str(label.shape))
 
@@ -245,7 +248,6 @@ def gen_dMRI_test_datasets(path, subject, ndwi, scheme, label_type, combine=None
             
     if fdata:
         data = load_nii_image(path + '/' + subject + '/diffusion.nii')
-        # data = load_nii_image(path + '/' + subject + '/diffusion.nii', mask)
         
         # Select the inputs.
         if combine is not None:
@@ -333,14 +335,12 @@ def repack_pred_label(pred, mask, model, ntype):
     
     if model[:6] == 'conv2d':
         # add zero paddinsg to the reproduced 2d label
-        # label[:, 1:-1, 1:-1, :] = pred.transpose(1, 0, 2, 3)
+        # label[1:-1, :, 1:-1, :] = pred.transpose(1, 0, 2, 3)
         label[:, 1:-1, 1:-1, :] = pred
-
-        # label[1:-1, 1:-1, :, :] = pred
     elif model[:6] == 'conv3d':
         label[1:-1, 1:-1, 1:-1, :] = pred
     else:
         label = pred.reshape(label.shape)
     
-    # label[:,:,:,1]=label[:,:,:,1]/1000 # scale MD back while saving nii
+    label[:,:,:,0]=label[:,:,:,0]/1 # scale MD back while saving nii
     return label

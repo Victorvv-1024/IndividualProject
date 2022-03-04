@@ -27,7 +27,7 @@ class MRIModel(object):
     _label = ''
     _kernel1 = 150
     _kernel2 = 250
-    _kernel3 = 150
+    _kernel3 = 350
 
     def __init__(self, ndwi=96, model='fc1d', layer=3, train=True, kernels=None, test_shape=None):
         self._ndwi = ndwi
@@ -43,20 +43,14 @@ class MRIModel(object):
         """
         Fully-connected 1d ANN model.
         """
-        if self._train:
-            inputs = Input(shape=(self._ndwi,))
-        else:
-            print("train is false")
-            (dim0, dim1) = (self._test_shape[0], self._test_shape[1])
-            inputs = Input(shape=(dim0, dim1, self._ndwi))
-        # inputs = Input(shape=(self._ndwi,))
+        inputs = Input(shape=(self._ndwi,))
         # Define hidden layer
         hidden = Dense(self._kernel1, activation='relu')(inputs)
         for i in np.arange(self._layer  - 1):
             hidden = Dense(self._kernel1, activation='relu')(hidden)
         hidden = Dropout(0.1)(hidden)
         # Define output layer for Experiment 1
-        outputs = Dense(1, name='output', activation='relu')(hidden)
+        outputs = Dense(3, name='output', activation='relu')(hidden)
 
         self._model = Model(inputs=inputs, outputs=outputs)
 
@@ -65,24 +59,21 @@ class MRIModel(object):
         """
         Conv2D model.
         """
-        
         if self._train:
             inputs = Input(shape=(patch_size, patch_size, self._ndwi))
         else:
-            (dim0, dim1) = (self._test_shape[0], self._test_shape[1])
+            (dim0, dim1) = (self._test_shape[1], self._test_shape[2])
             inputs = Input(shape=(dim0, dim1, self._ndwi))
-        hidden = Conv2D(self._kernel1, 3, activation='relu', padding='valid')(inputs)
+        hidden = Conv2D(self._kernel3, patch_size, activation='relu', padding='valid')(inputs)
         for i in np.arange(self._layer - 1):
-            # hidden = BatchNormalization()(hidden)
-            hidden = Conv2D(self._kernel1, 1, activation='relu', padding='valid')(hidden)
+            hidden = Conv2D(self._kernel3, 1, activation='relu', padding='valid')(hidden)
             # hidden = Dense(self._kernel1, activation='relu')(hidden)
         hidden = Dropout(0.1)(hidden)
         # For experiment 1, the output is 1
-        outputs = Conv2D(1, 1, activation='relu', padding='valid')(hidden)
+        outputs = Conv2D(3, 1, activation='relu', padding='valid')(hidden)
+        # outputs = Dense(1, name='output', activation='relu')(hidden)
 
         self._model = Model(inputs=inputs, outputs=outputs)
-
-
 
     def _conv3d_model(self, patch_size):
         """
@@ -93,9 +84,10 @@ class MRIModel(object):
         else:
             (dim0, dim1, dim2) = (self._test_shape[0], self._test_shape[1], self._test_shape[2])
             inputs = Input(shape=(dim0, dim1, dim2, self._ndwi))
-        hidden = Conv3D(self._kernel1, 3, activation='relu', padding='valid')(inputs)
+        hidden = Conv3D(self._kernel1, patch_size, activation='relu', padding='valid')(inputs)
         for i in np.arange(self._layer - 1):
             hidden = Conv3D(self._kernel1, 1, activation='relu', padding='valid')(hidden)
+            # hidden = Dense(self._kernel1, activation='relu')(hidden)
         hidden = Dropout(0.1)(hidden)
         # For experiment 1, the output is 1
         outputs = Conv3D(1, 1, activation='relu', padding='valid')(hidden)
@@ -120,7 +112,7 @@ class MRIModel(object):
 
         validation_split = 0.0
         if validation_data is None:
-            validation_split = 0.2
+            validation_split = 0.1
 
         self._hist = self._model.fit(data, label,
                                      batch_size=nbatch,
