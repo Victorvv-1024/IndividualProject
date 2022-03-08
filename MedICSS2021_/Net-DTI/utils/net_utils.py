@@ -70,6 +70,7 @@ def loss_rmse(y_true, y_pred):
     """
     return K.sqrt(K.mean(K.square(y_pred - y_true), keepdims=True))
 
+
 loss_funcs = [loss_func, loss_func_1, loss_func_2, loss_func_3, loss_func_4, loss_func_5, loss_func_6, loss_func_7, loss_func_8, loss_func_9, loss_func_10]
 
 
@@ -103,7 +104,7 @@ def calc_RMSE(pred, gt, mask, percentage=False, model='', index=None):
     """
     Calculate RMSE of a & b
     """
-    if model[:6] == 'conv3d' or 'conv2d':
+    if model[:6] == 'conv3d':
         #true_mask[:, :, 1:-1] = mask[:, :, 1:-1]
         mask[:, :, 0] = 0
         mask[:, :, -1] = 0
@@ -117,6 +118,9 @@ def calc_RMSE(pred, gt, mask, percentage=False, model='', index=None):
 
     pred = pred[mask > 0]
     gt = gt[mask > 0]
+
+    print(type(pred))
+    print(type(gt))
 
     if percentage:
         return np.sqrt((((pred - gt) / (gt + 1e-7)) ** 2).mean())

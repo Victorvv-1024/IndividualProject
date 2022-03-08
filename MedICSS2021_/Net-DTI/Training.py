@@ -14,8 +14,10 @@ from scipy.io import savemat
 
 from tensorflow.keras.optimizers import SGD, Adam
 from tensorflow.keras.models import save_model, load_model
+from tensorflow.keras.losses import MeanAbsoluteError
 from tensorflow.keras.callbacks import ReduceLROnPlateau, TensorBoard, \
                                                             EarlyStopping
+                                    
 
 from utils import MRIModel, parser, loss_funcs, fetch_train_data_MultiSubject
 from utils.model import parser
@@ -47,7 +49,7 @@ def train_network(args):
     # Constants
     types = ['NDI' , 'ODI', 'FWF']
     ntypes = len(types)
-    decay = 0.1
+    decay =  1e-6
 
     shuffle = False
     y_accuracy = None
@@ -64,7 +66,8 @@ def train_network(args):
         # Define the model.
         model = MRIModel(nDWI, model=mtype, layer=layer, train=train, kernels=kernels)
 
-        model.model(adam, loss_funcs[loss], patch_size)
+        # model.model(adam, loss_funcs[loss], patch_size)
+        model.model(adam,loss=MeanAbsoluteError(), patch_size=patch_size)
 
         data, label = fetch_train_data_MultiSubject(train_subjects, mtype, nDWI, scheme, label_type)
 

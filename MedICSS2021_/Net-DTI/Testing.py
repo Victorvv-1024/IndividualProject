@@ -75,7 +75,7 @@ def test_model(args):
     weights = model._model.layers[1].get_weights()
 
     # Predict on the test data.
-    if mtype == 'conv3d':
+    if mtype[:6] == 'conv3d':
         shape = tdata.shape
         tdata = tf.expand_dims(tdata, 0)
         pred = model.predict(tdata)

@@ -83,6 +83,10 @@ def gen_2d_patches(data, mask, size, stride):
                 lxend, lyend = np.array([x, y]) + stride
                 if mask[x:lxend, y:lyend, layer].sum() > 0:
                     patches.append(data[x:xend, y:yend, layer, :])
+        if layer == 0: 
+            print(len(patches))
+        if layer == 1:
+            print(len(patches))
 
     return np.array(patches)
     
@@ -91,20 +95,29 @@ def gen_3d_patches(data, mask, size, stride):
     generate 3d patches
     """
     patches = []
+    masked_count = 0
+    print(mask.shape)
     for layer in np.arange(0, mask.shape[2], stride):
         for x in np.arange(0, mask.shape[0], stride):
             for y in np.arange(0, mask.shape[1], stride):
                 xend, yend, layerend = np.array([x, y, layer]) + size
-                lxend, lyend, llayerend = np.array([x, y, layer]) + stride
+                lxend, lyend, llayerend = np.array([x, y, layer]) + stride 
+                #because stride is 1, so mask[x:lxend, ...] the slicing is just measuring mask[x,y,layer]; 
+                #therefore, it acts the same as gen2d patches when we only want to get 1 label (e.g. NDI)
                 if mask[x:lxend, y:lyend, layer:llayerend].sum() > 0:
                     patch = data[x:xend, y:yend, layer: layerend, :]
-                    shape = np.shape(patch)
-                    if shape[2] != size:
-                        padded_patch = np.zeros((size,size,size,shape[3]))
-                        padded_patch[:,:,:shape[2],] = patch
-                        patches.append(padded_patch)
+                    masked_count += 1
+                    # shape = np.shape(patch)
+                    # if shape[2] != size:
+                    #     padded_patch = np.zeros((size,size,size,shape[3]))
+                    #     padded_patch[:,:,:shape[2],] = patch
+                    #     patches.append(padded_patch)
+                    #     continue
+                    # patches.append(patch)
+                    if layerend > mask.shape[2]:
                         continue
                     patches.append(patch)
+    print(masked_count)
     return np.array(patches)
 
 def gen_dMRI_conv2d_train_datasets(path, subject, ndwi, scheme, patch_size, label_size, label_type, base=1, test=False, combine=None, whiten=True):
@@ -336,11 +349,13 @@ def repack_pred_label(pred, mask, model, ntype):
     if model[:6] == 'conv2d':
         # add zero paddinsg to the reproduced 2d label
         # label[1:-1, :, 1:-1, :] = pred.transpose(1, 0, 2, 3)
-        label[:, 1:-1, 1:-1, :] = pred
+        # label[:, 1:-1, 1:-1, :] = pred
+        label = pred
     elif model[:6] == 'conv3d':
-        label[1:-1, 1:-1, 1:-1, :] = pred
+        # label[1:-1, 1:-1, 1:-1, :] = pred
+        label = pred.numpy()
     else:
         label = pred.reshape(label.shape)
     
-    label[:,:,:,0]=label[:,:,:,0]/1 # scale MD back while saving nii
+    # label[:,:,:,0]=label[:,:,:,0]/1 # scale MD back while saving nii
     return label

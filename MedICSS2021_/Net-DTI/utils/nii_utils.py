@@ -19,6 +19,14 @@ def mask_nii_data(data, mask):
     data = data.reshape(mask.shape[0], -1)
     print('data befor masking')
     print(data.shape)
+
+    # test the number of masked voxels is correct
+    count = 0
+    for i in range(data.shape[0]):
+        if mask[i] > 0:
+            count+=1
+    print('masked count is: ' +str(count))
+
     data = data[mask > 0]
     print('data after masking')
     print(data.shape)
