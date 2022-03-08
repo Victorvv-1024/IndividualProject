@@ -107,6 +107,7 @@ def gen_3d_patches(data, mask, size, stride):
                 if mask[x:lxend, y:lyend, layer:llayerend].sum() > 0:
                     patch = data[x:xend, y:yend, layer: layerend, :]
                     masked_count += 1
+                    # one version that add zero layer paddings to layer 46 and layer 47
                     # shape = np.shape(patch)
                     # if shape[2] != size:
                     #     padded_patch = np.zeros((size,size,size,shape[3]))
@@ -114,6 +115,7 @@ def gen_3d_patches(data, mask, size, stride):
                     #     patches.append(padded_patch)
                     #     continue
                     # patches.append(patch)
+                    # one version that skips expanding the voxel at layer 46 and 47
                     if layerend > mask.shape[2]:
                         continue
                     patches.append(patch)
