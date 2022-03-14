@@ -10,8 +10,15 @@ from tensorflow.keras import backend as K
 
 def loss_func(y_true, y_pred):
     """
-    Use RMSE loss.
-    """
+    use the calc_RMSE_loss to find the RMSE loss between predicted and reference
+
+    Args:
+        y_true (ndarray): contains the value of ground truth label
+        y_pred (ndarray): contains the value of the predicted label
+
+    Returns:
+        float: the RMSE loss between y_true and y_pred
+    """ 
     return loss_rmse(y_true, y_pred) 
 
 def loss_func_1(y_true, y_pred):
@@ -100,11 +107,12 @@ def loss_ssim(y_true, y_pred):
                 (K.square(K.std(y_true)) + K.square(K.std(y_pred))) \
                )
 
-def calc_RMSE(pred, gt, mask, masked_voxel, percentage=False, model='', index=None):
+def calc_RMSE(pred, gt, mask, percentage=False, model='', index=None):
     """
     Calculate RMSE of a & b
     """
-    if model[:6] == 'conv3d':
+    # if the model is 3d or 2d, the mask is shrinked. Because the mask is shrinked at generating the patches
+    if model[:6] == 'conv3d' or 'conv2d':
         mask[:, :, 0] = 0
         mask[:, :, -1] = 0
         if index is not None:
@@ -115,26 +123,26 @@ def calc_RMSE(pred, gt, mask, masked_voxel, percentage=False, model='', index=No
         gt = gt[:, :, index:index+1]
         mask = mask[:, :, index:index+1]
 
+    # look for the masked voxels
     pred = pred[mask > 0]
     print('pred shape: ' + str(pred.shape))
     gt = gt[mask > 0]
     print('gt has shape: ' + str(gt.shape))
 
     if percentage:
-        # return np.sqrt((((pred - gt) / (gt + 1e-7)) ** 2).mean())
-        return np.sqrt(np.sum(((pred - gt) / (gt + 1e-7)) ** 2)/masked_voxel)
+        return np.sqrt((((pred - gt) / (gt + 1e-7)) ** 2).mean())
     else:
-        # return np.sqrt(((pred - gt) ** 2).mean())
-        return np.sqrt(np.sum((pred - gt) ** 2)/masked_voxel)
+        return np.sqrt(((pred - gt) ** 2).mean())
 
 def calc_psnr(a, b):
     """
+    calculate the psnr between a and b
     """
     return -20 * np.log(np.max(b) / (np.sqrt(np.mean(np.square(a - b)))) + 1e-8)
 
 def calc_ssim(a, b):
     """
-    A
+    calculate the ssim between a and b
     """
     lxy = (2 * a.mean() * b.mean()) / (a.mean() ** 2 + b.mean() ** 2)
     cxy = (2 * np.std(a) * np.std(b)) / (np.std(a) ** 2 + np.std(b) ** 2)
@@ -148,6 +156,7 @@ def calc_ssim(a, b):
 def calc_percent(pred, gt, mask, threshold=0.5, model='', index=None):
     """
     Calculate the percent of difference
+    Only the difference below the threshold is included.
     """
     pred = pred[mask > 0]
     gt = gt[mask > 0]

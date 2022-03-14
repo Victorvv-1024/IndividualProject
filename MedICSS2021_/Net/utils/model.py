@@ -1,8 +1,5 @@
 """
 Module definition for network training and testing.
-
-Define your new model here
-
 """
 
 import os
@@ -20,17 +17,27 @@ class MRIModel(object):
     MRI models
     """
 
-    _ndwi = 0
+    _ndwi = 0 # the input size
     _single = False
-    _model = None
-    _type = ''
-    _loss = []
-    _label = ''
-    _kernel1 = 150
-    _kernel2 = 200
-    _kernel3 = 250
+    _model = None # the choice of the model
+    _type = '' # the type of model, input from user
+    _loss = [] # choice of loss function
+    _kernel1 = 150 # kernel size
+    _kernel2 = 200 # kernel size
+    _kernel3 = 250 # kernel size
 
     def __init__(self, ndwi=96, model='fc1d', layer=3, train=True, kernels=None, test_shape=None):
+        """
+        initialisation of MRI model class
+
+        Args:
+            ndwi (int, optional): the number of input size. Defaults to 96.
+            model (str, optional): the choice of the model. Defaults to 'fc1d'.
+            layer (int, optional): the number of hidden layers. Defaults to 3.
+            train (bool, optional): if True, then do training. Else, do testing. Defaults to True.
+            kernels (_type_, optional): a list of integers, that defines the kernel sizes for kernel1,2,3. Defaults to None.
+            test_shape (_type_, optional): the shape of the test data. It should be a 3D. Defaults to None.
+        """        
         self._ndwi = ndwi
         self._type = model
         self._hist = None
@@ -44,13 +51,15 @@ class MRIModel(object):
         """
         Fully-connected 1d ANN model.
         """
+        # the Input layer takes input of size (None, _ndwi)
         inputs = Input(shape=(self._ndwi,))
         # Define hidden layer
         hidden = Dense(self._kernel1, activation='relu')(inputs)
         for i in np.arange(self._layer  - 1):
             hidden = Dense(self._kernel1, activation='relu')(hidden)
         hidden = Dropout(0.1)(hidden)
-        # Define output layer for Experiment 1
+        # Define output layer
+        # The output size can be changed from 1 to 3
         outputs = Dense(1, name='output', activation='relu')(hidden)
 
         self._model = Model(inputs=inputs, outputs=outputs)
@@ -59,19 +68,22 @@ class MRIModel(object):
     def _conv2d_model(self, patch_size):
         """
         Conv2d model.
-        The input dimension for training is by default 3x3x96; where 3x3 suggests the patch size and 96 is the input size
-        The input dimension for testing is testshape[0]xtestshape[1]x96. Hence we can feed the image directly to the trained network
         """
+        # The input dimension for training is by default 3x3x96; where 3x3 suggests the patch size and 96 is the input size
         if self._train:
             inputs = Input(shape=(patch_size, patch_size, self._ndwi))
+        # The input dimension for testing is by default testshape[0]xtestshape[1]x96. Hence we can feed the image directly to the trained network
         else:
             (dim0, dim1, dim2) = (self._test_shape[0], self._test_shape[1], self._test_shape[2])
             inputs = Input(shape=(dim0, dim1, self._ndwi))
+        # The first Convolutional layer, having kernel size 3x3
         hidden = Conv2D(self._kernel1, 3, strides=1, activation='relu', padding='valid')(inputs)
+        # Define the hidden layer
         for i in np.arange(self._layer - 1):
             hidden = Conv2D(self._kernel1, 1, strides=1, activation='relu', padding='valid')(hidden)
         hidden = Dropout(0.1)(hidden)
-        # for experiment 1, we want only one output
+        # Define output layer
+        # The output size can be changed from 1 to 3
         outputs = Conv2D(1, 1, strides=1, activation='relu', padding='valid')(hidden)
 
         self._model = Model(inputs=inputs, outputs=outputs)
@@ -79,23 +91,27 @@ class MRIModel(object):
     def _conv3d_model(self, patch_size):
         """
         Conv3D model.
-        The input dimension for training is by default 3x3x3x96; where 3x3x3 suggests the patch size and 96 is the input size
-        The input dimension for testing is testshape[0]xtestshape[1]xtestshape[2]x96. Hence we can feed the image directly to the trained network
         """
+        # The input dimension for training is by default 3x3x3x96; where 3x3x3 suggests the patch size and 96 is the input size
         if self._train:
             inputs = Input(shape=(patch_size, patch_size, patch_size, self._ndwi))
+        # The input dimension for testing is testshape[0]xtestshape[1]xtestshape[2]x96. Hence we can feed the image directly to the trained network
         else:
             (dim0, dim1, dim2) = (self._test_shape[0], self._test_shape[1], self._test_shape[2])
             inputs = Input(shape=(dim0, dim1, dim2, self._ndwi))
+        # The first Convolutional layer, having kernel size 3x3x3
         hidden = Conv3D(self._kernel1, 3, activation='relu', padding='valid')(inputs)
+        # Define the hidden layer
         for i in np.arange(self._layer - 1):
             hidden = Conv3D(self._kernel1, 1, activation='relu', padding='valid')(hidden)
         hidden = Dropout(0.1)(hidden)
-        # for experiment 1, we want only one output
+        # Define output layer
+        # The output size can be changed from 1 to 3
         outputs = Conv3D(1, 1, activation='relu', padding='valid')(hidden)
         
         self._model = Model(inputs=inputs, outputs=outputs)
 
+    # The choice of models
     __model = {
         'fc1d' : _fc1d_model,
         'conv2d': _conv2d_model,
@@ -104,18 +120,38 @@ class MRIModel(object):
 
     def model(self, optimizer, loss, patch_size):
         """
-        Generate model.
+        Generate the model
+        Args:
+            optimizer: the choice of optimizer for the model
+            loss: the loss function of the model
+            patch_size (int): the patch size, by default it is 3
         """
+        # generate the model
         self.__model[self._type](self, patch_size)
+        # gives the summary of the model, including number of trained parameters; output shapes at each layer and so on.
         self._model.summary()
+        # compile the model. The metrics is accuracy because we are doing regression.
         self._model.compile(loss=loss, optimizer=optimizer, metrics=['accuracy'])
 
     def _sequence_train(self, data, label, nbatch, epochs, callbacks, shuffle, validation_data):
+        """
+        sequentially train the model
 
+        Args:
+            data (ndarray): the fetched train data
+            label (ndarray): the fetched train label
+            nbatch (int): the number of batches per epoch. By default, it is 256
+            epochs (int): the number of epoches. By default, it is 100
+            callbacks: enables early stop
+            shuffle (boolean): if True, shuffle the data. Else, not.
+            validation_data (ndarray): the validation data
+        """        
         validation_split = 0.0
+        # if the validation data is none, we split the train data into train data and validation data
         if validation_data is None:
-            validation_split = 0.2
+            validation_split = 0.5 # set the split to 0.5 becasue the number of training input is large
 
+        # fit the model to the train dataset and validated against validation dataset
         self._hist = self._model.fit(data, label,
                                      batch_size=nbatch,
                                      epochs=epochs,
@@ -129,6 +165,7 @@ class MRIModel(object):
         self._loss.append(self._hist.history['accuracy'][-1])
         self._loss.append(None)
 
+    # for each model type, use the corresponding train method
     __train = {
         'fc1d' : _sequence_train,
         'conv2d': _sequence_train,
@@ -143,7 +180,7 @@ class MRIModel(object):
         print("Training start ...")
         self.__train[self._type](self, data, label, nbatch, epochs,
                                  callbacks, shuffle, validation_data)
-
+        # save the weight, hence the saved weight can be directly used when testing
         try:
             self._model.save_weights('weights/' + weightname + '.weights')
         except IOError:

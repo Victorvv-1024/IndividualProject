@@ -1,7 +1,19 @@
 """
 Main script for network training and testing
-Definition of the command-line arguments are in model.py and can be displayed by `python Training.py -h`
+Definition of the command-line arguments are in model.py and can be displayed by `python3 Training.py -h`
 
+Usage:
+1. To train a fc1d model:
+    
+    python3 Training.py --path $DataDir --subjects s01_still --label_type label --fc1d 
+  
+2. To train a 2D CNN model:
+    
+    python3 Training.py --path $DataDir --subjects s01_still --label_type label --conv2d 
+
+3. To train a 3D CNN model:
+    
+    python3 Training.py --path $DataDir --subjects s01_still --label_type label --conv3d 
 """
 
 import numpy as np
@@ -18,26 +30,23 @@ from tensorflow.keras.losses import MeanAbsoluteError
 from tensorflow.keras.callbacks import ReduceLROnPlateau, TensorBoard, \
                                                             EarlyStopping
                                     
-
-# from utils import MRIModel, parser, loss_funcs, fetch_train_data_MultiSubject
 from utils import MRIModel, loss_funcs, fetch_train_data
 from utils.model import parser
 
 
 # Get parameter from command-line input
 def train_network(args):
+    # the training parameters
     train_subjects = args.train_subjects
     nDWI = args.DWI
     scheme = args.scheme
     mtype = args.model
     train = args.train
-
     lr = args.lr
     epochs = args.epoch
     kernels = args.kernels
     layer = args.layer
     label_type = args.label_type
-
     loss = args.loss
     batch_size = args.batch
     patch_size = args.patch_size
@@ -45,7 +54,6 @@ def train_network(args):
     base = args.base
 
     # Parameter name definition
-    # savename = str(nDWI)+ '-'  + scheme + '-' + args.model + '-' + str(layer) + 'layer'
     if mtype == 'fc1d':
         patch_size = 1
     savename = str(nDWI) + '-' + args.model + '-' + \
@@ -59,11 +67,6 @@ def train_network(args):
     decay =  1e-6
 
     shuffle = False
-    # y_accuracy = None
-    # output_accuracy = None
-    # y_loss = None
-    # output_loss = None
-    # nepoch = None
 
     # Define the adam optimizer
     adam = Adam(lr=lr, beta_1=0.9, beta_2=0.999, epsilon=1e-8)
@@ -73,8 +76,7 @@ def train_network(args):
         # Define the model.
         model = MRIModel(nDWI, model=mtype, layer=layer, train=train, kernels=kernels)
 
-        model.model(adam, loss_funcs[loss], patch_size) # use the RMSE loss
-        # model.model(adam,loss=MeanAbsoluteError(), patch_size=patch_size)
+        model.model(adam, loss_funcs[loss], patch_size) # use the RMSE loss, if loss=0
 
         data, label = fetch_train_data(train_subjects, nDWI, mtype,
                                        label_type=label_type,
@@ -82,16 +84,19 @@ def train_network(args):
                                        label_size=label_size,
                                        base=base,
                                        )
+        
+        # define the early stop
         reduce_lr = ReduceLROnPlateau(monitor="loss", factor=0.5, patience=10, epsilon=0.0001)
         tensorboard = TensorBoard(histogram_freq=0)
         early_stop = EarlyStopping(monitor='val_loss', patience=30, min_delta=0.0000005)
-#       [nepoch, output_loss, y_loss, output_accuracy, y_accuracy]
+
         result = model.train(data, label, batch_size, epochs,
                             [reduce_lr, tensorboard, early_stop],
                             savename, shuffle=not shuffle,
                             validation_data=None)
         history = model._hist
         return history
+        
 if __name__ == '__main__':
     args = parser().parse_args()
     history = train_network(args)

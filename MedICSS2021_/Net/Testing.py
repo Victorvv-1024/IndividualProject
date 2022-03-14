@@ -1,7 +1,19 @@
 """
 Main script for network training and testing
-Definition of the command-line arguments are in model.py and can be displayed by `python Testing.py -h`
+Definition of the command-line arguments are in model.py and can be displayed by `python3 Testing.py -h`
 
+Usage:
+1. To test a fc1d model:
+    
+    python3 Testing.py --path $DataDir --subjects s01_still --label_type label --fc1d 
+  
+2. To test a 2D CNN model:
+    
+    python3 Testing.py --path $DataDir --subjects s01_still --label_type label --conv2d 
+
+3. To test a 3D CNN model:
+    
+    python3 Testing.py --path $DataDir --subjects s01_still --label_type label --conv3d 
 """
 
 
@@ -14,17 +26,16 @@ from scipy.io import savemat, loadmat
 from sympy import arg
 
 from tensorflow.keras.optimizers import SGD, Adam
-from tensorflow.keras.models import save_model, load_model
-from tensorflow.keras.callbacks import ReduceLROnPlateau, TensorBoard, \
-                                                            EarlyStopping
 
 from utils import save_nii_image, calc_RMSE, loss_func, repack_pred_label, \
-                  MRIModel, load_nii_image, loss_funcs, fetch_test_data
+                  MRIModel, load_nii_image, loss_funcs, fetch_test_data, \
+                  calc_ssim
 from utils.model import parser
 
 
 # Get parameter from command-line input
 def test_model(args):
+    # get the test paramters
     test_subjects = args.test_subjects[0]
     nDWI = args.DWI
     mtype = args.model
@@ -61,8 +72,6 @@ def test_model(args):
     tdata = fetch_test_data(test_subjects, mask, nDWI, mtype, patch_size=patch_size)
     if test_shape is None:
         test_shape = tdata.shape[1:4]
-        # change the test_shape to include the (x,y,z,ndwi) rather than (y,z,ndwi)
-        # test_shape = tdata.shape[0:4]
     print(test_shape)
 
     # Define the model
@@ -79,21 +88,14 @@ def test_model(args):
     pred = model.predict(tdata)
     print('testing data shape: ' + str(tdata.shape))
     print('prediction has shape: ' + str(pred.shape))
-    # Evluate on the test data
+    # get the ground truth label
     tlabel = loadmat('datasets/label/' + test_subjects + '_' + lsavename + '.mat')['label']
     # repack the pred into suitable shape
-    pred, masked_voxel = repack_pred_label(pred, mask, mtype, len(ltype))
+    pred = repack_pred_label(pred, mask, mtype, len(ltype))
     print('prediction after repack has shape: ' + str(pred.shape))
-
-    print('the RMSE loss is: ' + str(calc_RMSE(pred, tlabel, mask, masked_voxel,percentage=False, model=mtype)))
-    # if mtype == 'fc1d':
-    #     print('the RMSE loss is: ' + str(calc_RMSE(pred, tlabel, mask, percentage=False, model=mtype)))
-    # elif mtype == 'conv2d':
-    #     shrinkedmask = mask[base:-base,base:-base,base:-base]
-    #     x,y,z = shrinkedmask.shape
-    #     temppred = pred[:x,:y,:z]
-    #     temptlabel = tlabel[:x,:y,:z]
-    #     print('the RMSE loss is: ' + str(calc_RMSE(temppred, temptlabel, shrinkedmask, percentage=False, model=mtype)))
+    # Evaluate the prediction by RMSE and SSIM
+    print('the RMSE loss is: ' + str(calc_RMSE(pred, tlabel, mask, percentage=False, model=mtype))\
+        + 'the SSIM is: ' + str(calc_ssim(pred, tlabel)))
 
     # Save estimated measures to /nii folder as nii image
     os.system("mkdir -p nii")

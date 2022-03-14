@@ -15,7 +15,18 @@ from utils.nii_utils import load_nii_image, save_nii_image, mask_nii_data, unmas
 Rewrite the data_utils, because we think the dataset generated having some issues
 """
 def gen_base_datasets(path, subject, label_type, fdata=True, flabel=True):
-    """
+    """_
+    Generate the basic dataset for all subjects. Needs to be run first.
+    To run this, for example:
+    python3 FormatData.py --subjects s01_still --label_type N --path [abs path of Data-NODDI]
+
+    Args:
+        path (string): the abs path of Data-NODDI
+        subject (string): the name of the subject folder
+        label_type (char): a character that suggests the label
+        fdata (bool, optional): True if writing the data. Defaults to True.
+        flabel (bool, optional): True if writing the label. Defaults to True.
+    """    """
     Generate base Datasets. 
     Needs to run for all subjects first
     """
@@ -28,6 +39,7 @@ def gen_base_datasets(path, subject, label_type, fdata=True, flabel=True):
         ltype = ['FWF']
     elif label_type == ['A']:
         ltype = ['NDI' , 'ODI', 'FWF']
+    # generate the mask file
     os.system("mkdir -p datasets/data datasets/label datasets/mask")
     os.system('cp ' +  path + '/' + subject + '/mask-e.nii datasets/mask/mask_' + subject + '.nii')
     print('Generating for ' + subject + ' ...')
@@ -36,6 +48,7 @@ def gen_base_datasets(path, subject, label_type, fdata=True, flabel=True):
     savename = ''.join(ltype)
         
     if fdata:
+        # load the data file
         data = load_nii_image(path + '/' + subject + '/diffusion.nii')
         print('base data dataset has shape: ' + str(data.shape))
         savemat('datasets/data/' + subject + '.mat', {'data':data})
@@ -43,6 +56,7 @@ def gen_base_datasets(path, subject, label_type, fdata=True, flabel=True):
     if flabel:
         mask = load_nii_image('datasets/mask/mask_' + subject + '.nii')
         label = np.zeros(mask.shape + (len(ltype),))
+        # for each label, load it
         for i in range(len(ltype)):
             filename = path + '/' + subject + '/' + subject + '_' + ltype[i] + '.nii'
             label[:, :, :, i] = load_nii_image(filename)
@@ -51,8 +65,15 @@ def gen_base_datasets(path, subject, label_type, fdata=True, flabel=True):
 
 def gen_fc1d_datasets(path, subject, patch_size, label_size, label_type, base=1, test=False):
     """
-    Generate fc1d training Datasets.
-    """
+    Generate the fc1d dataset
+    To run this, for example:
+    python3 FormatData.py --subjects s01_still --label_type N --path [abs path of Data-NODDI folder]
+    Args:
+        patch_size (int): suggest the patch size
+        label_size (int): suggest the label size
+        base (int, optional): . Defaults to 1.
+        test (bool, optional): . Defaults to False.
+    """  
     print("Generating for " + subject + " ...")
 
     # ltype are a list of label types
@@ -90,7 +111,16 @@ def gen_fc1d_datasets(path, subject, patch_size, label_size, label_type, base=1,
 
 def gen_2d_patches(data, mask, size, stride):
     """
-    gen patches
+    Generating the 2d patches
+    Args:
+        data (ndarray): the array that contains the value of data
+        mask (ndarray): contains the value of the mask
+        size (int): the size of the patch
+        stride (int): the size of the label
+
+    Returns:
+        ndarray: the patched data. It has 4 dims, where the first dim is number of masked voxels
+                the second and third dim is the patch size, the forth dim is the input size
     """
     patches = []
     for layer in range(mask.shape[2]): # visiting the slice
@@ -105,7 +135,16 @@ def gen_2d_patches(data, mask, size, stride):
 
 def gen_3d_patches(data, mask, size, stride):
     """
-    gen patches
+    Generating the 3d patches
+    Args:
+        data (ndarray): the array that contains the value of data
+        mask (ndarray): contains the value of the mask
+        size (int): the size of the patch
+        stride (int): the size of the label
+
+    Returns:
+        ndarray: the patched data. It has 5 dims, where the first dim is number of masked voxels
+                the second, third and forth dim is the patch size, the fifth dim is the input size
     """
     print(data.shape, mask.shape)
     patches = []
@@ -159,46 +198,71 @@ def gen_conv2d_datasets(path, subject, patch_size, label_size, label_type, base=
     savemat('datasets/label/' + subject + '-base' + str(base) + '-labels-2d-' + str(patch_size)\
             + '-' + str(label_size) + '-' + savename + '.mat', {'label':labels})
 
-def gen_conv3d_datasets(path, subjects, patch_size, label_size, base=1, test=False):
+def gen_conv3d_datasets(path, subject, patch_size, label_size, label_type, base=1, test=False):
     """
     Generate Conv3D Datasets.
     """
+    # ltype are a list of label types
+    if label_type == ['N']:
+        ltype = ['NDI']
+    elif label_type == ['O']:
+        ltype = ['ODI']
+    elif label_type == ['F']:
+        ltype = ['FWF']
+    elif label_type == ['A']:
+        ltype = ['NDI' , 'ODI', 'FWF']
+    savename = ''.join(ltype)
     # offset = base - (patch_size - label_size) / 2
-    for subject in subjects:
         
-        print("Generating for " + subject + " ...")
+    print("Generating for " + subject + " ...")
+    mask = load_nii_image('datasets/mask/mask_' + subject + '.nii')
+    mask = mask[base:-base, base:-base, base:-base]
+    print('mask has shape: ' + str(mask.shape))
+    data = loadmat('datasets/data/' + subject + '.mat')['data']
+    # data = data[base:-base, base:-base, base:-base, :]
+    print('data has shape: ' + str(data.shape))
+    labels = loadmat('datasets/label/' + subject + '_' + savename + '.mat')['label']
+    labels = labels[base:-base, base:-base, base:-base, :]
+    print('label has shape: ' + str(labels.shape))
 
-        labels = loadmat('datasets/label/' + subject+ '.mat')['label']
-        labels = labels[base:-base, base:-base, base:-base, :]
-        mask = load_nii_image(path + '/' + subject + '/mask-e.nii')
-        mask = mask[base:-base, base:-base, base:-base]
-        
-        data = loadmat('datasets/data/' + subject + '.mat')['data']
-        # data = data[base:-base, base:-base, base:-base, :]
+    # if offset:
+    #     data = data[offset:-offset, offset:-offset, offset:-offset, :12]
 
-        # if offset:
-        #     data = data[offset:-offset, offset:-offset, offset:-offset, :12]
+    patches = gen_3d_patches(data, mask, patch_size, label_size)
+    patches = patches.reshape(patches.shape[0], -1)
+    print('saved patches has shape: ' + str(patches.shape))
+    savemat('datasets/data/' + subject + '-base' + str(base) + '-patches-3d-' + str(patch_size)\
+        + '-' + str(label_size) + '-all.mat', {'data':patches},  format='4')
 
-        patches = gen_3d_patches(data, mask, patch_size, label_size)
-        patches = patches.reshape(patches.shape[0], -1)
-        savemat('datasets/data/' + subject + '-base' + str(base) + '-patches-3d-' + str(patch_size)\
-            + '-' + str(label_size) + '-all.mat', {'data':patches},  format='4')
-
-        labels = gen_3d_patches(labels, mask, label_size, label_size)
-        savemat('datasets/label/' + subject + '-base' + str(base) + '-labels-3d-' + str(patch_size)\
-                + '-' + str(label_size) + '-all.mat', {'label':labels})
-
-        print(patches.shape)
-        print(labels.shape)
+    labels = gen_3d_patches(labels, mask, label_size, label_size)
+    print('svaed labels has shape: ' + str(labels.shape))
+    savemat('datasets/label/' + subject + '-base' + str(base) + '-labels-3d-' + str(patch_size)\
+             + '-' + str(label_size) + '-' + savename + '.mat', {'label':labels})
 
 def fetch_train_data(subjects, ndwi, model, label_type, patch_size=3, label_size=1, base=1,
                 whiten=True, combine=None):
     """
-    #Fetch train data.
+    Fetch the training data
+
+    Args:
+        subjects (string): the name of the subject
+        ndwi (int): the number of wanted dwi
+        model (string): the model type
+        label_type (char): the wanted label
+        patch_size (int, optional): the size of the patch. Defaults to 3.
+        label_size (int, optional): the size of the label. Defaults to 1.
+        base (int, optional): Defaults to 1.
+        whiten (bool, optional): normalise the data. Defaults to True.
+        combine (_type_, optional): _description_. Defaults to None.
+
+    Returns:
+        data : the fetched data
+        label: the fetched label
     """
     data_s = None
     labels = None
     
+    # depending on the model, the saved filename is different
     if model[:6] == 'conv2d':
         filename = '-2d-' + str(patch_size) + '-' + str(label_size)
     elif model[:6] == 'conv3d':
@@ -207,6 +271,7 @@ def fetch_train_data(subjects, ndwi, model, label_type, patch_size=3, label_size
         patch_size = 1
         filename = '-1d-' + str(patch_size) + '-' + str(label_size)
     
+    # depending on the label type we are fetching
     print(label_type)
     if label_type == ['N']:
         ltype = ['NDI']
@@ -219,10 +284,12 @@ def fetch_train_data(subjects, ndwi, model, label_type, patch_size=3, label_size
     
     savename = ''.join(ltype)
 
+    # for each subject
     for subject in subjects:
         label = loadmat('datasets/label/' + subject + '-base' + str(base) + '-labels' + filename + '-' + savename + '.mat')['label']
         data = loadmat('datasets/data/' + subject + '-base' + str(base) + '-patches' + filename + '-' + 'all.mat')['data']
 
+        # remove any nan values
         for i in range(label.shape[0]):
             if np.isnan(label[i]).any():
                 label[i] = 0
@@ -291,32 +358,21 @@ def shuffle_data(data, label):
 
 def repack_pred_label(pred, mask, model, ntype, segment=False):
     """
-    Get.
+    Add paddings to the pred
     """
-    masked_voxel = 0
     if model[7:13] == 'single':
         label = np.zeros(mask.shape + (1,))
     else:
         label = np.zeros(mask.shape + (ntype,))
     
     if model[:6] == 'conv2d':
-        unpadded_label = pred.transpose(1, 2, 0, 3)
-        unpadded_label = unpadded_label[:,:,:48,:]
-        shrinked_mask = mask[1:-1,1:-1,1:-1]
-        masked_unpadded_label = unpadded_label[shrinked_mask>0]
-        print('masked unpadded label has shape: ' + str(masked_unpadded_label.shape))
-        masked_voxel = masked_unpadded_label.shape[0]
+        # padding with zeros
         label[1:-1, 1:-1, :, :] = pred.transpose(1, 2, 0, 3)
-        # just for test
-        # label[1:-1, 1:-1, 1:-1, :] = unpadded_label
-        masked_label = label[mask>0]
-        print('masked padded label has shape: ' + str(masked_label.shape))
     elif model[:6] == 'conv3d':
+        # padding with zeros
         label[1:-1, 1:-1, 1:-1, :] = pred
     else:
+        # fc1d does not need paddings
         label = pred.reshape(label.shape)
-        masked_label = label[mask>0]
-        print('masked label has shape: ' + str(masked_label.shape))
-        masked_voxel = masked_label.shape[0]
 
-    return label, masked_voxel
+    return label
