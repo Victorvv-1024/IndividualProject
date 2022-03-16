@@ -58,6 +58,10 @@ def test_model(args):
     elif label_type == ['A']:
         ltype = ['NDI' , 'ODI', 'FWF']
     lsavename = ''.join(ltype)
+    
+    if label_type != ['A']:
+        out = 1 # specify the output dimension of the network
+
     # Parameter name definition
     if mtype == 'fc1d':
         patch_size = 1
@@ -75,7 +79,7 @@ def test_model(args):
     print(test_shape)
 
     # Define the model
-    model = MRIModel(nDWI, model=mtype, layer=layer, train=False, kernels=kernels, test_shape=test_shape)
+    model = MRIModel(nDWI, model=mtype, layer=layer, train=False, kernels=kernels, test_shape=test_shape, out=out)
     # Define the adam optimizer
     adam = Adam(lr=lr, beta_1=0.9, beta_2=0.999, epsilon=1e-8)
     model.model(adam, loss_funcs[loss], patch_size)
@@ -90,6 +94,7 @@ def test_model(args):
     print('prediction has shape: ' + str(pred.shape))
     # get the ground truth label
     tlabel = loadmat('datasets/label/' + test_subjects + '_' + lsavename + '.mat')['label']
+    print(tlabel.shape)
     # repack the pred into suitable shape
     pred = repack_pred_label(pred, mask, mtype, len(ltype))
     print('prediction after repack has shape: ' + str(pred.shape))

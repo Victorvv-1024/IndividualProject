@@ -29,6 +29,7 @@ from tensorflow.keras.models import save_model, load_model
 from tensorflow.keras.losses import MeanAbsoluteError
 from tensorflow.keras.callbacks import ReduceLROnPlateau, TensorBoard, \
                                                             EarlyStopping
+from tensorflow import keras
                                     
 from utils import MRIModel, loss_funcs, fetch_train_data
 from utils.model import parser
@@ -60,6 +61,9 @@ def train_network(args):
            'patch' + '_' + str(patch_size) + \
            '-base_' + str(base) + \
            '-layer_' + str(layer)
+        
+    if label_type != ['A']:
+        out = 1 #specify the output dimension of the network
 
     # Constants
     types = ['NDI' , 'ODI', 'FWF']
@@ -74,7 +78,7 @@ def train_network(args):
     # Train on the training data.
     if train:
         # Define the model.
-        model = MRIModel(nDWI, model=mtype, layer=layer, train=train, kernels=kernels)
+        model = MRIModel(nDWI, model=mtype, layer=layer, train=train, kernels=kernels, out=out)
 
         model.model(adam, loss_funcs[loss], patch_size) # use the RMSE loss, if loss=0
 
@@ -84,6 +88,12 @@ def train_network(args):
                                        label_size=label_size,
                                        base=base,
                                        )
+
+        extractor = keras.Model(inputs=model._model.inputs,
+                outputs=[layer.output for layer in model._model.layers])
+        features = extractor(data)
+        for f in features:
+            print(f.shape)
         
         # define the early stop
         reduce_lr = ReduceLROnPlateau(monitor="loss", factor=0.5, patience=10, epsilon=0.0001)

@@ -25,8 +25,9 @@ class MRIModel(object):
     _kernel1 = 150 # kernel size
     _kernel2 = 200 # kernel size
     _kernel3 = 250 # kernel size
+    _out = 3
 
-    def __init__(self, ndwi=96, model='fc1d', layer=3, train=True, kernels=None, test_shape=None):
+    def __init__(self, ndwi=96, model='fc1d', layer=3, train=True, kernels=None, test_shape=None, out=None):
         """
         initialisation of MRI model class
 
@@ -37,6 +38,7 @@ class MRIModel(object):
             train (bool, optional): if True, then do training. Else, do testing. Defaults to True.
             kernels (_type_, optional): a list of integers, that defines the kernel sizes for kernel1,2,3. Defaults to None.
             test_shape (_type_, optional): the shape of the test data. It should be a 3D. Defaults to None.
+            out(int, optional): specify the output dimension of the model
         """        
         self._ndwi = ndwi
         self._type = model
@@ -44,8 +46,11 @@ class MRIModel(object):
         self._train = train
         self._layer = layer
         self._test_shape = test_shape
+        self._model = None
         if kernels is not None:
             self._kernel1, self._kernel2, self._kernel3 = kernels
+        if out is not None:
+            self._out = out
    
     def _fc1d_model(self, patch_size):
         """
@@ -60,9 +65,10 @@ class MRIModel(object):
         hidden = Dropout(0.1)(hidden)
         # Define output layer
         # The output size can be changed from 1 to 3
-        outputs = Dense(1, name='output', activation='relu')(hidden)
+        outputs = Dense(self._out, name='output', activation='relu')(hidden)
 
         self._model = Model(inputs=inputs, outputs=outputs)
+        
 
     
     def _conv2d_model(self, patch_size):
@@ -84,7 +90,7 @@ class MRIModel(object):
         hidden = Dropout(0.1)(hidden)
         # Define output layer
         # The output size can be changed from 1 to 3
-        outputs = Conv2D(1, 1, strides=1, activation='relu', padding='valid')(hidden)
+        outputs = Conv2D(self._out, 1, strides=1, activation='relu', padding='valid')(hidden)
 
         self._model = Model(inputs=inputs, outputs=outputs)
 
@@ -107,7 +113,7 @@ class MRIModel(object):
         hidden = Dropout(0.1)(hidden)
         # Define output layer
         # The output size can be changed from 1 to 3
-        outputs = Conv3D(1, 1, activation='relu', padding='valid')(hidden)
+        outputs = Conv3D(self._out, 1, activation='relu', padding='valid')(hidden)
         
         self._model = Model(inputs=inputs, outputs=outputs)
 
