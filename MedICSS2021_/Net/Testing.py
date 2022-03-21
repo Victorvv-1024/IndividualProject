@@ -48,6 +48,13 @@ def test_model(args):
     loss = args.loss
     test_shape = args.test_shape
 
+    # determin the input DWI volumes using a scheme file
+    movefile = args.movefile
+    if movefile is not None:
+        file = open(movefile,'r')
+        combine = np.array([int(num) for num in file.readline().split(' ')[:-1]])
+        nDWI = combine.sum()
+
     # Constants
     if label_type == ['N']:
         ltype = ['NDI']
@@ -61,6 +68,7 @@ def test_model(args):
     
     if label_type != ['A']:
         out = 1 # specify the output dimension of the network
+    else: out = 3
 
     # Parameter name definition
     if mtype == 'fc1d':
@@ -68,12 +76,13 @@ def test_model(args):
     savename = str(nDWI) + '-' + args.model + '-' + \
         'patch' + '_' + str(patch_size) + \
         '-base_' + str(base) + \
-        '-layer_' + str(layer)
+        '-layer_' + str(layer) + \
+        '-label_' + lsavename
     print(savename)
 
     # Load testing data
     mask = load_nii_image('datasets/mask/mask_' + test_subjects + '.nii')
-    tdata = fetch_test_data(test_subjects, mask, nDWI, mtype, patch_size=patch_size)
+    tdata = fetch_test_data(test_subjects, mask, nDWI, mtype, patch_size=patch_size, combine=combine)
     if test_shape is None:
         test_shape = tdata.shape[1:4]
     print(test_shape)
@@ -99,15 +108,14 @@ def test_model(args):
     pred = repack_pred_label(pred, mask, mtype, len(ltype))
     print('prediction after repack has shape: ' + str(pred.shape))
     # Evaluate the prediction by RMSE and SSIM
-    print('the RMSE loss is: ' + str(calc_RMSE(pred, tlabel, mask, percentage=False, model=mtype))\
-        + 'the SSIM is: ' + str(calc_ssim(pred, tlabel)))
+    print('the RMSE loss is: ' + str(calc_RMSE(pred, tlabel, mask, percentage=False, model=mtype)))
 
     # Save estimated measures to /nii folder as nii image
     os.system("mkdir -p nii")
 
     for i in range(len(ltype)):
         data = pred[..., i]
-        filename = 'nii/' + test_subjects + '-' + ltype[i] + '-' + savename + '.nii'
+        filename = 'nii/' + test_subjects + '-' + savename + '.nii'
 
         data[mask == 0] = 0
         save_nii_image(filename, data, 'datasets/mask/mask_' + test_subjects + '.nii', None)

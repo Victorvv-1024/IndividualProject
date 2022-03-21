@@ -40,7 +40,6 @@ def train_network(args):
     # the training parameters
     train_subjects = args.train_subjects
     nDWI = args.DWI
-    scheme = args.scheme
     mtype = args.model
     train = args.train
     lr = args.lr
@@ -54,16 +53,34 @@ def train_network(args):
     label_size = patch_size - 2
     base = args.base
 
+    # determin the input DWI volumes using a scheme file
+    movefile = args.movefile
+    if movefile is not None:
+        file = open(movefile,'r')
+        combine = np.array([int(num) for num in file.readline().split(' ')[:-1]]) # the scheme file
+        nDWI = combine.sum() # update the input size
+
     # Parameter name definition
+    if label_type == ['N']:
+        ltype = ['NDI']
+    elif label_type == ['O']:
+        ltype = ['ODI']
+    elif label_type == ['F']:
+        ltype = ['FWF']
+    elif label_type == ['A']:
+        ltype = ['NDI' , 'ODI', 'FWF']
+    lsavename = ''.join(ltype)
     if mtype == 'fc1d':
         patch_size = 1
     savename = str(nDWI) + '-' + args.model + '-' + \
            'patch' + '_' + str(patch_size) + \
            '-base_' + str(base) + \
-           '-layer_' + str(layer)
+           '-layer_' + str(layer)+ \
+           '-label_' + lsavename
         
     if label_type != ['A']:
         out = 1 #specify the output dimension of the network
+    else: out = 3
 
     # Constants
     types = ['NDI' , 'ODI', 'FWF']
@@ -87,7 +104,7 @@ def train_network(args):
                                        patch_size=patch_size,
                                        label_size=label_size,
                                        base=base,
-                                       )
+                                       combine=combine)
 
         extractor = keras.Model(inputs=model._model.inputs,
                 outputs=[layer.output for layer in model._model.layers])

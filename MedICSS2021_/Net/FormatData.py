@@ -59,8 +59,6 @@ def generate_data(args):
     label_type = args.label_type
     patch_size = args.patch_size
     label_size = args.label_size
-    test = args.test
-    Nolabel = args.Nolabel
 
     # determine the input volumes using the first n volumes
     nDWI = args.nDWI
@@ -78,10 +76,7 @@ def generate_data(args):
     # Format the dataset
     if base:
         for subject in subjects:
-            if Nolabel:
-                gen_base_datasets(path, subject, label_type=label_type, fdata=True, flabel=False)
-            else: 
-                gen_base_datasets(path, subject, label_type=label_type, fdata=True, flabel=True)
+            gen_base_datasets(path, subject, label_type=label_type, fdata=True, flabel=True)
     if fc1d:
         for subject in subjects:
             gen_fc1d_datasets(path, subject, patch_size, label_size, label_type, base=1, test=False)

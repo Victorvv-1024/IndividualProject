@@ -4,6 +4,7 @@ Module definition for network training and testing.
 
 import os
 import argparse
+from tabnanny import verbose
 import numpy as np
 import tensorflow.keras as K
 
@@ -27,7 +28,7 @@ class MRIModel(object):
     _kernel3 = 250 # kernel size
     _out = 3
 
-    def __init__(self, ndwi=96, model='fc1d', layer=3, train=True, kernels=None, test_shape=None, out=None):
+    def __init__(self, ndwi=96, model='fc1d', layer=3, train=True, kernels=None, test_shape=None, out=3):
         """
         initialisation of MRI model class
 
@@ -49,8 +50,7 @@ class MRIModel(object):
         self._model = None
         if kernels is not None:
             self._kernel1, self._kernel2, self._kernel3 = kernels
-        if out is not None:
-            self._out = out
+        self._out = out
    
     def _fc1d_model(self, patch_size):
         """
@@ -164,7 +164,8 @@ class MRIModel(object):
                                      shuffle=shuffle,
                                      validation_data=validation_data,
                                      validation_split=validation_split,
-                                     callbacks=callbacks)
+                                     callbacks=callbacks,
+                                     verbose=0)# set only when I want a silent environment
         self._loss.append(len(self._hist.history['loss']))
         self._loss.append(self._hist.history['loss'][-1])
         self._loss.append(None)
@@ -229,7 +230,7 @@ def parser():
     # Specify train & test sets
     parser.add_argument("--train_subjects", help="Training subjects IDs", nargs='*')
     parser.add_argument("--test_subjects", help="Testing subject ID", nargs='*')
-    parser.add_argument("--scheme", metavar='name', help="The scheme for sampling", default='first')
+    parser.add_argument("--movefile", default=None)
     parser.add_argument("--DWI", metavar='N', help="Number of input DWI volumes", type=int, default=96)
     parser.add_argument("--batch", metavar='bn', help="Batch size", type=int, default=256)
     parser.add_argument("--base", metavar='base', help="choice of training data", type=int, default=1)
