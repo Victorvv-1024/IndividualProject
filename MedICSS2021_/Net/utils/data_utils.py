@@ -41,7 +41,8 @@ def gen_base_datasets(path, subject, label_type, fdata=True, flabel=True):
         ltype = ['NDI' , 'ODI', 'FWF']
     # generate the mask file
     os.system("mkdir -p datasets/data datasets/label datasets/mask")
-    os.system('cp ' +  path + '/' + subject + '/mask-e.nii datasets/mask/mask_' + subject + '.nii')
+    # use the filtered mask
+    os.system('cp ' +  path + '/' + subject + '/filtered_mask.nii datasets/mask/mask_' + subject + '.nii')
     print('Generating for ' + subject + ' ...')
 
     # define the savename

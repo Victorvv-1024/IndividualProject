@@ -65,7 +65,8 @@ class MRIModel(object):
         hidden = Dropout(0.1)(hidden)
         # Define output layer
         # The output size can be changed from 1 to 3
-        outputs = Dense(self._out, name='output', activation='relu')(hidden)
+        # change the activation at the output layer sig, gives a value between 0 and 1
+        outputs = Dense(self._out, name='output', activation='sigmoid')(hidden)
 
         self._model = Model(inputs=inputs, outputs=outputs)
         
@@ -90,7 +91,7 @@ class MRIModel(object):
         hidden = Dropout(0.1)(hidden)
         # Define output layer
         # The output size can be changed from 1 to 3
-        outputs = Conv2D(self._out, 1, strides=1, activation='relu', padding='valid')(hidden)
+        outputs = Conv2D(self._out, 1, strides=1, activation='sigmoid', padding='valid')(hidden)
 
         self._model = Model(inputs=inputs, outputs=outputs)
 
@@ -113,7 +114,7 @@ class MRIModel(object):
         hidden = Dropout(0.1)(hidden)
         # Define output layer
         # The output size can be changed from 1 to 3
-        outputs = Conv3D(self._out, 1, activation='relu', padding='valid')(hidden)
+        outputs = Conv3D(self._out, 1, activation='sigmoid', padding='valid')(hidden)
         
         self._model = Model(inputs=inputs, outputs=outputs)
 
