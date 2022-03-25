@@ -54,11 +54,13 @@ def train_network(args):
     base = args.base
 
     # determin the input DWI volumes using a scheme file
+    combine = None
     movefile = args.movefile
     if movefile is not None:
         file = open(movefile,'r')
         combine = np.array([int(num) for num in file.readline().split(' ')[:-1]]) # the scheme file
         nDWI = combine.sum() # update the input size
+    print(nDWI)
 
     # Parameter name definition
     if label_type == ['N']:

@@ -1,8 +1,16 @@
 import argparse
 
-def load_eddy(path, thresholda=2, thresholdb=1, thresholdc=3, thresholdd=1, thresholde=0.1, lineno=96):
+def load_eddy(args):
     """
     """
+    path = args.path
+    thresholda = args.t0
+    thresholdb = args.t1
+    thresholdc = args.r0
+    thresholdd = args.r1
+    thresholde = args.out
+    lineno = args.num
+    
     filename = '/QAfrom-eddylog.txt'
 
     pfile = open(path + filename, 'r')
@@ -28,11 +36,11 @@ def load_eddy(path, thresholda=2, thresholdb=1, thresholdc=3, thresholdd=1, thre
                 # print line.split(' ')
     pfile.close()
 
-    pfile = open(path + '/move.txt', 'w')
+    pfile = open(path + '/move_t0-'+str(thresholda)+'_t1-'+str(thresholdb)+'_r0-'+str(thresholdc)+'_r1-'+str(thresholdd)+'_out-'+str(thresholde)+'.txt', 'w')
     pfile.writelines("%s " % str(item) for item in move)
     pfile.close()
 
-if __name__ == '__main__':
+def parser():
     parser = argparse.ArgumentParser()
     parser.add_argument("--path")
     parser.add_argument("--t0", type=float)
@@ -41,6 +49,10 @@ if __name__ == '__main__':
     parser.add_argument("--r1", type=float)
     parser.add_argument("--out", type=float)
     parser.add_argument("--num", type=int)
-    args = parser.parse_args()
+    
 
-    load_eddy(args.path, args.t0, args.t1, args.r0, args.r1, args.out, args.num)
+    return parser
+
+if __name__ == '__main__':
+    args = parser().parse_args()
+    load_eddy(args)

@@ -49,6 +49,7 @@ def test_model(args):
     test_shape = args.test_shape
 
     # determin the input DWI volumes using a scheme file
+    combine = None
     movefile = args.movefile
     if movefile is not None:
         file = open(movefile,'r')
@@ -115,6 +116,12 @@ def test_model(args):
 
     for i in range(len(ltype)):
         data = pred[..., i]
+        savename = str(nDWI) + '-' + args.model + '-' + \
+                    'patch' + '_' + str(patch_size) + \
+                    '-base_' + str(base) + \
+                    '-layer_' + str(layer) + \
+                    '-label_' + ltype[i]
+                    
         filename = 'nii/' + test_subjects + '-' + savename + '.nii'
 
         data[mask == 0] = 0
