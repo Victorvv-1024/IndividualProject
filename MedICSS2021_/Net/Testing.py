@@ -74,14 +74,23 @@ def test_model(args):
     # Parameter name definition
     if mtype == 'fc1d':
         patch_size = 1
+    # savename = str(nDWI) + '-' + args.model + '-' + \
+    #     'patch' + '_' + str(patch_size) + \
+    #     '-base_' + str(base) + \
+    #     '-layer_' + str(layer) + \
+    #     '-label_' + lsavename
+    # update the savename to synthetic
     savename = str(nDWI) + '-' + args.model + '-' + \
-        'patch' + '_' + str(patch_size) + \
-        '-base_' + str(base) + \
-        '-layer_' + str(layer) + \
-        '-label_' + lsavename
+           'patch' + '_' + str(patch_size) + \
+           '-base_' + str(base) + \
+           '-layer_' + str(layer)+ \
+           '-label_' + lsavename + 'synthetic'
     print(savename)
 
     # Load testing data
+    # mask = load_nii_image('datasets/mask/filtered_mask_' + test_subjects + '.nii')
+    # if lsavename == 'FWF':
+    #     mask = load_nii_image('datasets/mask/mask_' + test_subjects + '.nii')
     mask = load_nii_image('datasets/mask/mask_' + test_subjects + '.nii')
     tdata = fetch_test_data(test_subjects, mask, nDWI, mtype, patch_size=patch_size, combine=combine)
     if test_shape is None:
@@ -102,7 +111,7 @@ def test_model(args):
     pred = model.predict(tdata)
     print('testing data shape: ' + str(tdata.shape))
     print('prediction has shape: ' + str(pred.shape))
-    # get the ground truth label
+    # get the ground truth label (NOT SYNTHETIC)
     tlabel = loadmat('datasets/label/' + test_subjects + '_' + lsavename + '.mat')['label']
     print(tlabel.shape)
     # repack the pred into suitable shape
@@ -116,11 +125,17 @@ def test_model(args):
 
     for i in range(len(ltype)):
         data = pred[..., i]
+        # savename = str(nDWI) + '-' + args.model + '-' + \
+        #             'patch' + '_' + str(patch_size) + \
+        #             '-base_' + str(base) + \
+        #             '-layer_' + str(layer) + \
+        #             '-label_' + ltype[i]
+        # update the savename to synthetic
         savename = str(nDWI) + '-' + args.model + '-' + \
-                    'patch' + '_' + str(patch_size) + \
-                    '-base_' + str(base) + \
-                    '-layer_' + str(layer) + \
-                    '-label_' + ltype[i]
+           'patch' + '_' + str(patch_size) + \
+           '-base_' + str(base) + \
+           '-layer_' + str(layer)+ \
+           '-label_' + ltype[i] + 'synthetic'
                     
         filename = 'nii/' + test_subjects + '-' + savename + '.nii'
 

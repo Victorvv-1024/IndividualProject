@@ -6,11 +6,11 @@ import os
 import argparse
 from tabnanny import verbose
 import numpy as np
-import tensorflow.keras as K
 
 from tensorflow.keras.models import Model, Sequential
 from tensorflow.keras import regularizers
-from tensorflow.keras.layers import Dense, Dropout, Input, Conv2D, Conv3D, Flatten, Reshape, Conv2DTranspose, UpSampling2D, Concatenate, BatchNormalization
+from tensorflow.keras.layers import Dense, Dropout, Input, Conv2D, Conv3D, ReLU, Flatten, Reshape, Conv2DTranspose, UpSampling2D, Concatenate, BatchNormalization
+from tensorflow.keras import backend as K
 
 
 class MRIModel(object):
@@ -51,7 +51,7 @@ class MRIModel(object):
         if kernels is not None:
             self._kernel1, self._kernel2, self._kernel3 = kernels
         self._out = out
-   
+
     def _fc1d_model(self, patch_size):
         """
         Fully-connected 1d ANN model.
@@ -65,13 +65,13 @@ class MRIModel(object):
         hidden = Dropout(0.1)(hidden)
         # Define output layer
         # The output size can be changed from 1 to 3
+        outputs = Dense(self._out, name='output')(hidden)
         # change the activation at the output layer sig, gives a value between 0 and 1
-        outputs = Dense(self._out, name='output', activation='sigmoid')(hidden)
+        activation_layer = ReLU(max_value=1.0)
+        outputs = activation_layer(outputs)
 
         self._model = Model(inputs=inputs, outputs=outputs)
         
-
-    
     def _conv2d_model(self, patch_size):
         """
         Conv2d model.
@@ -91,7 +91,9 @@ class MRIModel(object):
         hidden = Dropout(0.1)(hidden)
         # Define output layer
         # The output size can be changed from 1 to 3
-        outputs = Conv2D(self._out, 1, strides=1, activation='sigmoid', padding='valid')(hidden)
+        outputs = Conv2D(self._out, 1, strides=1, padding='valid')(hidden)
+        activation_layer = ReLU(max_value=1.0)
+        outputs = activation_layer(outputs)
 
         self._model = Model(inputs=inputs, outputs=outputs)
 
@@ -114,7 +116,9 @@ class MRIModel(object):
         hidden = Dropout(0.1)(hidden)
         # Define output layer
         # The output size can be changed from 1 to 3
-        outputs = Conv3D(self._out, 1, activation='sigmoid', padding='valid')(hidden)
+        outputs = Conv3D(self._out, 1, padding='valid')(hidden)
+        activation_layer = ReLU(max_value=1.0)
+        outputs = activation_layer(outputs)
         
         self._model = Model(inputs=inputs, outputs=outputs)
 
@@ -156,7 +160,7 @@ class MRIModel(object):
         validation_split = 0.0
         # if the validation data is none, we split the train data into train data and validation data
         if validation_data is None:
-            validation_split = 0.5 # set the split to 0.5 becasue the number of training input is large
+            validation_split = 0.2 # set the split to 0.5 becasue the number of training input is large
 
         # fit the model to the train dataset and validated against validation dataset
         self._hist = self._model.fit(data, label,

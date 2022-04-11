@@ -74,11 +74,17 @@ def train_network(args):
     lsavename = ''.join(ltype)
     if mtype == 'fc1d':
         patch_size = 1
+    # savename = str(nDWI) + '-' + args.model + '-' + \
+    #        'patch' + '_' + str(patch_size) + \
+    #        '-base_' + str(base) + \
+    #        '-layer_' + str(layer)+ \
+    #        '-label_' + lsavename
+    # update the savename to synthetic
     savename = str(nDWI) + '-' + args.model + '-' + \
            'patch' + '_' + str(patch_size) + \
            '-base_' + str(base) + \
            '-layer_' + str(layer)+ \
-           '-label_' + lsavename
+           '-label_' + lsavename + 'synthetic'
         
     if label_type != ['A']:
         out = 1 #specify the output dimension of the network
@@ -115,7 +121,7 @@ def train_network(args):
             print(f.shape)
         
         # define the early stop
-        reduce_lr = ReduceLROnPlateau(monitor="loss", factor=0.5, patience=10, epsilon=0.0001)
+        reduce_lr = ReduceLROnPlateau(monitor="loss", factor=0.5, patience=10, epsilon=0.00001)
         tensorboard = TensorBoard(histogram_freq=0)
         early_stop = EarlyStopping(monitor='val_loss', patience=30, min_delta=0.0000005)
 
