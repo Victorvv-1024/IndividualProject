@@ -62,7 +62,7 @@ class MRIModel(object):
         hidden = Dense(self._kernel1, activation='relu')(inputs)
         for i in np.arange(self._layer  - 1):
             hidden = Dense(self._kernel1, activation='relu')(hidden)
-        hidden = Dropout(0.1)(hidden)
+        # hidden = Dropout(0.1)(hidden)
         # Define output layer
         # The output size can be changed from 1 to 3
         outputs = Dense(self._out, name='output')(hidden)
@@ -160,7 +160,7 @@ class MRIModel(object):
         validation_split = 0.0
         # if the validation data is none, we split the train data into train data and validation data
         if validation_data is None:
-            validation_split = 0.2 # set the split to 0.5 becasue the number of training input is large
+            validation_split = 0.5 # set the split to 0.5 becasue the number of training input is large
 
         # fit the model to the train dataset and validated against validation dataset
         self._hist = self._model.fit(data, label,
