@@ -52,9 +52,10 @@ def test_model(args):
     combine = None
     movefile = args.movefile
     if movefile is not None:
-        file = open(movefile,'r')
-        combine = np.array([int(num) for num in file.readline().split(' ')[:-1]])
-        nDWI = combine.sum()
+        # file = open(movefile,'r')
+        # combine = np.array([int(num) for num in file.readline().split(' ')[:-1]])
+        combine = np.array([int(float(num)) for num in movefile])
+        nDWI = combine.sum() # update the input size
 
     # Constants
     if label_type == ['N']:
@@ -74,12 +75,7 @@ def test_model(args):
     # Parameter name definition
     if mtype == 'fc1d':
         patch_size = 1
-    # savename = str(nDWI) + '-' + args.model + '-' + \
-    #     'patch' + '_' + str(patch_size) + \
-    #     '-base_' + str(base) + \
-    #     '-layer_' + str(layer) + \
-    #     '-label_' + lsavename
-    # update the savename to synthetic
+
     savename = str(nDWI) + '-' + args.model + '-' + \
            'patch' + '_' + str(patch_size) + \
            '-base_' + str(base) + \
@@ -87,15 +83,10 @@ def test_model(args):
            '-label_' + lsavename + 'synthetic'
     print(savename)
 
-    # Load testing data
-    # mask = load_nii_image('datasets/mask/filtered_mask_' + test_subjects + '.nii')
-    # if lsavename == 'FWF':
-    #     mask = load_nii_image('datasets/mask/mask_' + test_subjects + '.nii')
     mask = load_nii_image('datasets/mask/mask_' + test_subjects + '.nii')
     tdata = fetch_test_data(test_subjects, mask, nDWI, mtype, patch_size=patch_size, combine=combine)
     if test_shape is None:
         test_shape = tdata.shape[1:4]
-    print(test_shape)
 
     # Define the model
     model = MRIModel(nDWI, model=mtype, layer=layer, train=False, kernels=kernels, test_shape=test_shape, out=out)
@@ -108,28 +99,50 @@ def test_model(args):
     weights = model._model.layers[1].get_weights()
 
     # Predict on the testset
+    # pred[0] is NDI pred[1] is ODI and pred[2] is FWF
     pred = model.predict(tdata)
-    print('testing data shape: ' + str(tdata.shape))
-    print('prediction has shape: ' + str(pred.shape))
+
     # get the ground truth label (NOT SYNTHETIC)
-    tlabel = loadmat('datasets/label/' + test_subjects + '_' + lsavename + '.mat')['label']
-    print(tlabel.shape)
+    if len(ltype) == 3:
+        ndi = loadmat('datasets/label/' + test_subjects + '_NDI.mat')['label'][:,:,:,0]
+        odi = loadmat('datasets/label/' + test_subjects + '_ODI.mat')['label'][:,:,:,0]
+        fwf = loadmat('datasets/label/' + test_subjects + '_FWF.mat')['label'][:,:,:,0]
+    else:
+        tlabel = loadmat('datasets/label/' + test_subjects + '_' + lsavename + '.mat')['label']
+    print('ndi label has shape ' + str(ndi.shape))
+
     # repack the pred into suitable shape
     pred = repack_pred_label(pred, mask, mtype, len(ltype))
     print('prediction after repack has shape: ' + str(pred.shape))
+
     # Evaluate the prediction by RMSE and SSIM
-    print('the RMSE loss is: ' + str(calc_RMSE(pred, tlabel, mask, percentage=False, model=mtype)))
+    RMSE = []
+    SSIM = []
+    if len(ltype) == 3:
+        pred_ndi = pred[:,:,:,0]
+        print('pred ndi has shape: ' + str(pred_ndi.shape))
+        ndi_loss = calc_RMSE(pred[:,:,:,0], ndi, mask, percentage=False, model=mtype)
+        print(ndi_loss)
+        RMSE.append(ndi_loss)
+        odi_loss = calc_RMSE(pred[:,:,:,1], odi, mask, percentage=False, model=mtype)
+        RMSE.append(odi_loss)
+        fwf_loss = calc_RMSE(pred[:,:,:,2], fwf, mask, percentage=False, model=mtype)
+        RMSE.append(fwf_loss)
+
+        SSIM.append(round(calc_ssim(pred[:,:,:,0], ndi),3))
+        SSIM.append(round(calc_ssim(pred[:,:,:,1], odi),3))
+        SSIM.append(round(calc_ssim(pred[:,:,:,2], fwf),3))
+    else:
+        RMSE.append(round(calc_RMSE(pred, tlabel, mask, percentage=False, model=mtype),3))
+        SSIM.append(round(calc_ssim(pred, tlabel),3))
+    print('the RMSE loss is: ' + str(RMSE))
+    print('the SSIM loss is: ' + str(SSIM))
 
     # Save estimated measures to /nii folder as nii image
     os.system("mkdir -p nii")
 
     for i in range(len(ltype)):
         data = pred[..., i]
-        # savename = str(nDWI) + '-' + args.model + '-' + \
-        #             'patch' + '_' + str(patch_size) + \
-        #             '-base_' + str(base) + \
-        #             '-layer_' + str(layer) + \
-        #             '-label_' + ltype[i]
         # update the savename to synthetic
         savename = str(nDWI) + '-' + args.model + '-' + \
            'patch' + '_' + str(patch_size) + \
@@ -141,6 +154,8 @@ def test_model(args):
 
         data[mask == 0] = 0
         save_nii_image(filename, data, 'datasets/mask/mask_' + test_subjects + '.nii', None)
+    
+    return RMSE, SSIM
 
 if __name__ == '__main__':
   args = parser().parse_args()
