@@ -57,8 +57,9 @@ def train_network(args):
     combine = None
     movefile = args.movefile
     if movefile is not None:
-        file = open(movefile,'r')
-        combine = np.array([int(num) for num in file.readline().split(' ')[:-1]]) # the scheme file
+        # file = open(movefile,'r')
+        # combine = np.array([int(num) for num in file.readline().split(' ')[:-1]]) # the scheme file
+        combine = np.array([int(float(num)) for num in movefile])
         nDWI = combine.sum() # update the input size
     print(nDWI)
 
@@ -74,12 +75,7 @@ def train_network(args):
     lsavename = ''.join(ltype)
     if mtype == 'fc1d':
         patch_size = 1
-    # savename = str(nDWI) + '-' + args.model + '-' + \
-    #        'patch' + '_' + str(patch_size) + \
-    #        '-base_' + str(base) + \
-    #        '-layer_' + str(layer)+ \
-    #        '-label_' + lsavename
-    # update the savename to synthetic
+
     savename = str(nDWI) + '-' + args.model + '-' + \
            'patch' + '_' + str(patch_size) + \
            '-base_' + str(base) + \
