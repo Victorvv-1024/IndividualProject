@@ -235,7 +235,7 @@ def parser():
     # Specify train & test sets
     parser.add_argument("--train_subjects", help="Training subjects IDs", nargs='*')
     parser.add_argument("--test_subjects", help="Testing subject ID", nargs='*')
-    parser.add_argument("--movefile", default=None)
+    parser.add_argument("--movefile", default=None, nargs='*')
     parser.add_argument("--DWI", metavar='N', help="Number of input DWI volumes", type=int, default=96)
     parser.add_argument("--batch", metavar='bn', help="Batch size", type=int, default=256)
     parser.add_argument("--base", metavar='base', help="choice of training data", type=int, default=1)

@@ -29,7 +29,7 @@ from tensorflow.keras.optimizers import SGD, Adam
 
 from utils import save_nii_image, calc_RMSE, loss_func, repack_pred_label, \
                   MRIModel, load_nii_image, loss_funcs, fetch_test_data, \
-                  calc_ssim
+                  calc_ssim, calc_percent
 from utils.model import parser
 
 
@@ -81,7 +81,8 @@ def test_model(args):
            '-base_' + str(base) + \
            '-layer_' + str(layer)+ \
            '-label_' + lsavename + 'synthetic'
-    print(savename)
+
+    print('Test subject is ' + test_subjects)
 
     mask = load_nii_image('datasets/mask/mask_' + test_subjects + '.nii')
     tdata = fetch_test_data(test_subjects, mask, nDWI, mtype, patch_size=patch_size, combine=combine)
@@ -103,13 +104,15 @@ def test_model(args):
     pred = model.predict(tdata)
 
     # get the ground truth label (NOT SYNTHETIC)
+    if test_subjects[:3] == 's03' or test_subjects[:3] == 's04':
+        label_subject = test_subjects[:3] + '_still_reg'
+    else: label_subject = test_subjects
     if len(ltype) == 3:
-        ndi = loadmat('datasets/label/' + test_subjects + '_NDI.mat')['label'][:,:,:,0]
-        odi = loadmat('datasets/label/' + test_subjects + '_ODI.mat')['label'][:,:,:,0]
-        fwf = loadmat('datasets/label/' + test_subjects + '_FWF.mat')['label'][:,:,:,0]
+        ndi = loadmat('datasets/label/' + label_subject + '_NDI.mat')['label'][:,:,:,0]
+        odi = loadmat('datasets/label/' + label_subject + '_ODI.mat')['label'][:,:,:,0]
+        fwf = loadmat('datasets/label/' + label_subject + '_FWF.mat')['label'][:,:,:,0]
     else:
-        tlabel = loadmat('datasets/label/' + test_subjects + '_' + lsavename + '.mat')['label']
-    print('ndi label has shape ' + str(ndi.shape))
+        tlabel = loadmat('datasets/label/' + label_subject + '_' + lsavename + '.mat')['label']
 
     # repack the pred into suitable shape
     pred = repack_pred_label(pred, mask, mtype, len(ltype))
@@ -118,6 +121,7 @@ def test_model(args):
     # Evaluate the prediction by RMSE and SSIM
     RMSE = []
     SSIM = []
+    Percent = []
     if len(ltype) == 3:
         pred_ndi = pred[:,:,:,0]
         print('pred ndi has shape: ' + str(pred_ndi.shape))
@@ -132,11 +136,17 @@ def test_model(args):
         SSIM.append(round(calc_ssim(pred[:,:,:,0], ndi),3))
         SSIM.append(round(calc_ssim(pred[:,:,:,1], odi),3))
         SSIM.append(round(calc_ssim(pred[:,:,:,2], fwf),3))
+
+        Percent.append(round(calc_percent(pred[:,:,:,0], ndi, mask, threshold=0.1),3))
+        Percent.append(round(calc_percent(pred[:,:,:,1], odi, mask, threshold=0.1),3))
+        Percent.append(round(calc_percent(pred[:,:,:,2], fwf, mask, threshold=0.1),3))
     else:
         RMSE.append(round(calc_RMSE(pred, tlabel, mask, percentage=False, model=mtype),3))
         SSIM.append(round(calc_ssim(pred, tlabel),3))
+        Percent.append(round(calc_percent(pred,tlabel,mask,threshold=0.1),3))
     print('the RMSE loss is: ' + str(RMSE))
     print('the SSIM loss is: ' + str(SSIM))
+    print('the Percent is: ' + str(Percent))
 
     # Save estimated measures to /nii folder as nii image
     os.system("mkdir -p nii")
@@ -155,7 +165,7 @@ def test_model(args):
         data[mask == 0] = 0
         save_nii_image(filename, data, 'datasets/mask/mask_' + test_subjects + '.nii', None)
     
-    return RMSE, SSIM
+    return RMSE, SSIM, Percent
 
 if __name__ == '__main__':
   args = parser().parse_args()

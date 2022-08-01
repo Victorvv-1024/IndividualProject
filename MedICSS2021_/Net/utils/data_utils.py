@@ -52,26 +52,28 @@ def gen_base_datasets(path, subject, label_type, fdata=True, flabel=True):
     mask = load_nii_image(path + '/' + subject + '/mask-e.nii')
         
     if fdata:
-        # load the data file
-        # data = load_nii_image(path + '/' + subject + '/diffusion.nii')
-        # print('base data dataset has shape: ' + str(data.shape))
-        # savemat('datasets/data/' + subject + '.mat', {'data':data})
+        if subject.split('_')[-1] == 'motion':
+            flabel = False
+            data = load_nii_image(path + '/' + subject + '/diffusion.nii')
+            savemat('datasets/data/' + subject + '_synthetic.mat', {'data':data})
+        else:
+            data = loadmat(path + '/' + subject + '/roi_synthetic.mat')['noisy_vals_T']
+            volume = data.shape[1]
+            print(data.shape)
+            # reshape the data into 4D single
+            shape = mask.shape
+            print(shape)
 
-        
-        data = loadmat(path + '/' + subject + '/roi_synthetic.mat')['noisy_vals_T']
-        volume = data.shape[1]
-        # reshape the data into 4D single
-        shape = mask.shape
+            mask = mask.flatten()
+            value = np.zeros((mask.shape[0],volume))
+            for i in range(volume):
+                value[mask > 0, i] = data[:,i]
+            
+            data = value.reshape((shape[0], shape[1], shape[2], volume))
+            print('base data dataset has shape: ' + str(data.shape))
+            # save the synthetic version
+            savemat('datasets/data/' + subject + '_synthetic.mat', {'data':data})
 
-        mask = mask.flatten()
-        value = np.zeros((mask.shape[0],volume))
-        for i in range(volume):
-            value[mask > 0, i] = data[:,i]
-        
-        data = value.reshape((shape[0], shape[1], shape[2], volume))
-        print('base data dataset has shape: ' + str(data.shape))
-        # save the synthetic version
-        savemat('datasets/data/' + subject + '_synthetic.mat', {'data':data})
 
     if flabel:
         label = np.zeros(shape + (len(ltype),))
@@ -79,11 +81,9 @@ def gen_base_datasets(path, subject, label_type, fdata=True, flabel=True):
         for i in range(len(ltype)):
             # filename = path + '/' + subject + '/' + subject + '_' + ltype[i] + '.nii'
             # use the synthetic label
-            filename = path + '/' + subject + '/' + subject + '_' + ltype[i] + '_synthetic.nii'
+            filename = path + '/' + subject + '/' 'corrected_' + ltype[i].lower() + '_syn.nii'
             label[:, :, :, i] = load_nii_image(filename)
         print('base label dataset has shape: ' + str(label.shape))
-        # savemat('datasets/label/' + subject + '_' + savename + '.mat', {'label':label})
-        # save the synthetic version
         savemat('datasets/label/' + subject + '_' + savename + '_synthetic.mat', {'label':label})
 
 def gen_fc1d_datasets(path, subject, patch_size, label_size, label_type, base=1, test=False):
@@ -112,19 +112,11 @@ def gen_fc1d_datasets(path, subject, patch_size, label_size, label_type, base=1,
     patch_size = 1
         
     # load masked diffusion data
-    # use the filtered mask for NDI and ODI
-    # mask = load_nii_image('datasets/mask/filtered_mask_' + subject + '.nii')
-    # if savename == 'FWF':
-    #     mask = load_nii_image('datasets/mask/mask_' + subject + '.nii')
     mask = load_nii_image('datasets/mask/mask_' + subject + '.nii')
-    # data = loadmat('datasets/data/' + subject + '.mat')['data']
-    # load the synthetic data
     data = loadmat('datasets/data/' + subject + '_synthetic.mat')['data']
     data = mask_nii_data(data, mask)
     print('training dataset has shape:' + str(data.shape))
 
-    # load labels, without scaling
-    # labels = loadmat('datasets/label/' + subject + '_' + savename + '.mat')['label']
     # load the synthetic labels
     labels = loadmat('datasets/label/' + subject + '_' + savename + '_synthetic.mat')['label']
     print(labels.shape)
@@ -267,9 +259,6 @@ def gen_conv3d_datasets(path, subject, patch_size, label_size, label_type, base=
     # offset = base - (patch_size - label_size) / 2
         
     print("Generating for " + subject + " ...")
-    # mask = load_nii_image('datasets/mask/filtered_mask_' + subject + '.nii')
-    # if savename == 'FWF':
-    #     mask = load_nii_image('datasets/mask/mask_' + subject + '.nii')
     mask = load_nii_image('datasets/mask/mask_' + subject + '.nii')
     mask = mask[base:-base, base:-base, base:-base]
     print('mask has shape: ' + str(mask.shape))
@@ -280,9 +269,6 @@ def gen_conv3d_datasets(path, subject, patch_size, label_size, label_type, base=
     print('data has shape: ' + str(data.shape))
     # labels = loadmat('datasets/label/' + subject + '_' + savename + '.mat')['label']
     # load the synthetic labels
-    labels = loadmat('datasets/label/' + subject + '_' + savename + '_synthetic.mat')['label']
-    labels = labels[base:-base, base:-base, base:-base, :]
-    print('label has shape: ' + str(labels.shape))
 
     # if offset:
     #     data = data[offset:-offset, offset:-offset, offset:-offset, :12]
@@ -296,13 +282,17 @@ def gen_conv3d_datasets(path, subject, patch_size, label_size, label_type, base=
     savemat('datasets/data/' + subject + '-base' + str(base) + '-patches-3d-' + str(patch_size)\
         + '-' + str(label_size) + '-all-synthetic.mat', {'data':patches},  format='4')
 
-    labels = gen_3d_patches(labels, mask, label_size, label_size)
-    print('svaed labels has shape: ' + str(labels.shape))
-    # savemat('datasets/label/' + subject + '-base' + str(base) + '-labels-3d-' + str(patch_size)\
-    #          + '-' + str(label_size) + '-' + savename + '.mat', {'label':labels})
-    # save the synthetic version
-    savemat('datasets/label/' + subject + '-base' + str(base) + '-labels-3d-' + str(patch_size)\
-             + '-' + str(label_size) + '-' + savename + '-synthetic.mat', {'label':labels})
+    if subject.split('_')[-1] != 'motion':
+        labels = loadmat('datasets/label/' + subject + '_' + savename + '_synthetic.mat')['label']
+        labels = labels[base:-base, base:-base, base:-base, :]
+        print('label has shape: ' + str(labels.shape))
+        labels = gen_3d_patches(labels, mask, label_size, label_size)
+        print('svaed labels has shape: ' + str(labels.shape))
+        # savemat('datasets/label/' + subject + '-base' + str(base) + '-labels-3d-' + str(patch_size)\
+        #          + '-' + str(label_size) + '-' + savename + '.mat', {'label':labels})
+        # save the synthetic version
+        savemat('datasets/label/' + subject + '-base' + str(base) + '-labels-3d-' + str(patch_size)\
+                + '-' + str(label_size) + '-' + savename + '-synthetic.mat', {'label':labels})
 
 def fetch_train_data(subjects, ndwi, model, label_type, patch_size=3, label_size=1, base=1,
                 whiten=True, combine=None):

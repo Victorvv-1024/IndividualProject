@@ -1,7 +1,7 @@
 %% Set up the dependencies
 % set the NODDI toolbox root and nifti1 matlab
-NODDItoolboxRootDir = '/home/vw/Desktop/IndividualProject/MedICSS2021_/NODDI_tool';
-nifti1RootDir = '/home/vw/Desktop/IndividualProject/MedICSS2021_/nifti_matlab';
+NODDItoolboxRootDir = '/home/vw/Data/IndividualProject/MedICSS2021_/NODDI_tool';
+nifti1RootDir = '/home/vw/Data/IndividualProject/MedICSS2021_/nifti_matlab';
 
 % update the path
 addpath(genpath(NODDItoolboxRootDir));
@@ -9,7 +9,10 @@ addpath(genpath(nifti1RootDir));
 
 
 % set the NODDI dataset as root
-NODDIDataRootDir = '/home/vw/Desktop/IndividualProject/MedICSS2021_/Data-NODDI/s04_still_reg';
+NODDIDataRootDir = '/home/vw/Data/IndividualProject/MedICSS2021_/Data-NODDI/s03_still_reg';
+
+%% create the ROI
+CreateROI('8_diffusion.nii', 'filtered_mask.nii', 'NODDI_roi_8.mat')
 
 %% load the mask and the NODDI_roi
 %
@@ -26,8 +29,8 @@ matname = fullfile(filepath, [name extension]);
 save(matname, "mask", "roi", "idx");
 
 %% Get the imaging protocol
-bvalFile = [NODDIDataRootDir '/bvals'];
-bvecFile = [NODDIDataRootDir '/bvecs'];
+bvalFile = [NODDIDataRootDir '/8_bvals'];
+bvecFile = [NODDIDataRootDir '/8_bvecs'];
 
 protocol = FSL2Protocol(bvalFile, bvecFile);
 
@@ -35,9 +38,10 @@ protocol = FSL2Protocol(bvalFile, bvecFile);
 %% Create the NODDI model structure  
 noddi = MakeModel('WatsonSHStickTortIsoV_B0');
 
-
 %% Run the NODDI fitting with the function batch_fitting
-batch_fitting('NODDI_roi_synthetic.mat', protocol, noddi, 'S04FittedParams_synthetic.mat', 8);
+% batch_fitting('NODDI_roi_synthetic.mat', protocol, noddi, 'S03FittedParams_synthetic.mat', 8);
+batch_fitting('NODDI_roi_8.mat', protocol, noddi, 'FittedParams_8.mat', 8);
 
 %% Convert the estimated NODDI parameters into volumetric parameter maps
-SaveParamsAsNIfTI('S04FittedParams_synthetic.mat', 'NODDI_roi_synthetic.mat', 'mask-e.nii', 'synthetic')
+% SaveParamsAsNIfTI('S03FittedParams_synthetic.mat', 'NODDI_roi_synthetic.mat', 'mask-e.nii', 'synthetic')
+SaveParamsAsNIfTI('FittedParams_8.mat', 'NODDI_roi_8.mat', 'filtered_mask.nii', 'synthetic')
